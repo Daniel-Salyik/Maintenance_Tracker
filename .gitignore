@@ -44,4 +44,7 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# AI Metadata
+.claude/
 .claude/MEMORY.md
