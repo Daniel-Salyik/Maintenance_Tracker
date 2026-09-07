@@ -1,0 +1,15 @@
+{
+  "name": "maintenance_tracker_with_claude",
+  "version": "1.0.0",
+  "description": "Personal PET project to develop and testing a webapp with claude code",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "run test"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
