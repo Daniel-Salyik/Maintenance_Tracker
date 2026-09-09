@@ -39,7 +39,6 @@ playwright/.cache
 Thumbs.db
 
 # Database
-*.sql
 *.sqlite
 
 # TypeScript
