@@ -24,6 +24,10 @@ Given('a registered user exists with email {string} and password {string}', asyn
   this.currentUser = { email: uniqueEmail };
 });
 
+Given('no registered user exists with email {string}', async function (_email: string) {
+  // No setup needed - email is guaranteed unused in a fresh test DB
+});
+
 When('the user enters {string} and {string} on the login page', async function (email, password) {
   this.lastResponse = await request(API_URL)
     .post('/auth/login')
@@ -67,6 +71,20 @@ Given('a new user provides a valid email {string} and a strong password', async 
   };
 });
 
+Given('a new user provides an invalid email {string} and a strong password', async function (email: string) {
+  this.registrationData = {
+    email,
+    password: 'SecurePassword123!'
+  };
+});
+
+Given('a new user provides a valid email {string} and a weak password {string}', async function (email: string, password: string) {
+  this.registrationData = {
+    email: `${Date.now()}-${email}`,
+    password
+  };
+});
+
 When('they submit the registration form', async function () {
   this.lastResponse = await request(API_URL)
     .post('/auth/register')
@@ -84,6 +102,17 @@ Then('they should be automatically logged in and redirected to the bike setup wi
   expect(this.lastResponse.status).to.equal(200);
   expect(this.lastResponse.body.token).to.exist;
   expect(this.lastResponse.body.redirectTo).to.equal('/setup-wizard');
+});
+
+Then('they should see a registration error message {string}', async function (message: string) {
+  expect(this.lastResponse.status).to.be.oneOf([400, 409]);
+  expect(this.lastResponse.body.error).to.equal(message);
+});
+
+Then('no new account should be created in the database', async function () {
+  const res = await request(API_URL)
+    .get(`/auth/verify/${this.registrationData.email}`);
+  expect(res.status).to.equal(404);
 });
 
 // --- Section 2: OAuth Integration (@phase2 - excluded from default run, see SPECIFICATION.md 2.1/2.6) ---

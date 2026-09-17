@@ -24,6 +24,32 @@ Feature: User Authentication and Profile Management
     Then a new account should be created in the database
     And they should be automatically logged in and redirected to the bike setup wizard
 
+  Scenario: Registration fails with an already-registered email
+    Given a registered user exists with email "duplicate@example.com" and password "SecurePass123"
+    When a new user provides a valid email "duplicate@example.com" and a strong password
+    And they submit the registration form
+    Then they should see a registration error message "Email already in use"
+    And no new account should be created in the database
+
+  Scenario: Registration fails with an invalid email format
+    Given a new user provides an invalid email "not-an-email" and a strong password
+    When they submit the registration form
+    Then they should see a registration error message "Invalid email format"
+    And no new account should be created in the database
+
+  Scenario: Registration fails with a weak password
+    Given a new user provides a valid email "weakpass@example.com" and a weak password "123"
+    When they submit the registration form
+    Then they should see a registration error message "Password does not meet strength requirements"
+    And no new account should be created in the database
+
+  Scenario: Login fails with a non-existent email
+    Given no registered user exists with email "ghost@example.com"
+    When the user enters "ghost@example.com" and "AnyPassword123" on the login page
+    And clicks the "Login" button
+    Then they should see an error message "Invalid email or password"
+    And they should remain on the login page
+
   # --- Section 2: OAuth Integration (Phase 2 - deferred, see SPECIFICATION.md 2.1/2.6) ---
 
   @phase2
