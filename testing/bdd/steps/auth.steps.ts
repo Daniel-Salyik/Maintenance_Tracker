@@ -2,6 +2,7 @@ import { Given, When, Then } from '@cucumber/cucumber';
 import { expect } from 'chai';
 import request from 'supertest';
 import nock from 'nock';
+import { faker } from '@faker-js/faker';
 import 'dotenv/config';
 
 const API_URL = process.env.API_URL || 'http://localhost:3000';
@@ -12,16 +13,16 @@ const STRAVA_API_URL = 'https://www.strava.com/api';
 // --- Section 1: Standard Authentication ---
 
 Given('a registered user exists with email {string} and password {string}', async function (email, password) {
-  const uniqueEmail = `${Date.now()}-${email}`;
-  // Create real state via API
-  const regRes = await request(API_URL).post('/auth/register').send({ email: uniqueEmail, password });
+  // DB is reset before every scenario (see auth.hooks.ts), so the literal
+  // email can be used directly - no collision risk, no uniqueing needed.
+  const regRes = await request(API_URL).post('/auth/register').send({ email, password });
   expect(regRes.status).to.be.oneOf([200, 201]);
 
   // Log in to get token
-  const loginRes = await request(API_URL).post('/auth/login').send({ email: uniqueEmail, password });
+  const loginRes = await request(API_URL).post('/auth/login').send({ email, password });
   expect(loginRes.status).to.equal(200);
   this.currentToken = loginRes.body.token;
-  this.currentUser = { email: uniqueEmail };
+  this.currentUser = { email };
 });
 
 Given('no registered user exists with email {string}', async function (_email: string) {
@@ -64,9 +65,12 @@ Then('they should remain on the login page', async function () {
 });
 
 Given('a new user provides a valid email {string} and a strong password', async function (email) {
-  // Data generated per scenario to avoid collisions
+  // DB is reset before every scenario, so the literal email is safe to
+  // use directly - and when a prior step in the same scenario already
+  // registered this exact email (duplicate-email scenarios), reusing the
+  // literal here makes the collision real instead of coincidental.
   this.registrationData = {
-    email: `${Date.now()}-${email}`,
+    email,
     password: 'SecurePassword123!'
   };
 });
@@ -80,7 +84,7 @@ Given('a new user provides an invalid email {string} and a strong password', asy
 
 Given('a new user provides a valid email {string} and a weak password {string}', async function (email: string, password: string) {
   this.registrationData = {
-    email: `${Date.now()}-${email}`,
+    email,
     password
   };
 });
@@ -110,9 +114,15 @@ Then('they should see a registration error message {string}', async function (me
 });
 
 Then('no new account should be created in the database', async function () {
+  // This step is shared by three scenarios: duplicate-email (where the
+  // account already existed before the failed attempt), and
+  // invalid-email/weak-password (where no account was ever created).
+  // /auth/verify can't count rows, only report existence, so the
+  // correct expectation depends on which case we're in.
+  const alreadyExisted = this.currentUser?.email === this.registrationData.email;
   const res = await request(API_URL)
     .get(`/auth/verify/${this.registrationData.email}`);
-  expect(res.status).to.equal(404);
+  expect(res.status).to.equal(alreadyExisted ? 200 : 404);
 });
 
 // --- Section 2: OAuth Integration (@phase2 - excluded from default run, see SPECIFICATION.md 2.1/2.6) ---
@@ -160,7 +170,7 @@ Then('their Strava profile information should be linked to their app account', a
 
 Given('a logged-in user whose distance unit is set to {string}', async function (unit: string) {
   // Setup: Register -> Login -> Set Pref
-  const email = `pref-${Date.now()}@example.com`;
+  const email = faker.internet.email();
   await request(API_URL).post('/auth/register').send({ email, password: 'Password123!' });
   const login = await request(API_URL).post('/auth/login').send({ email, password: 'Password123!' });
   this.currentToken = login.body.token;
@@ -190,7 +200,7 @@ When('the user changes their distance preference to {string} in settings', async
 });
 
 Given('a logged-in user whose currency is set to {string}', async function (currency: string) {
-  const email = `pref-${Date.now()}@example.com`;
+  const email = faker.internet.email();
   await request(API_URL).post('/auth/register').send({ email, password: 'Password123!' });
   const login = await request(API_URL).post('/auth/login').send({ email, password: 'Password123!' });
   this.currentToken = login.body.token;
