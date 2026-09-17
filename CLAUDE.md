@@ -42,3 +42,11 @@ The project strictly adheres to a Shift-Left approach for all feature developmen
 - **Component Tracking**: Wear tracking based on mileage, service intervals, status indicators (Green/Yellow/Red).
 - **Maintenance Logging**: Service events, proactive alerting, costs, and history.
 - **Financials**: Total cost analysis and data export (CSV/PDF).
+
+
+## Git workflow
+Do not create git worktrees for any task. Make all changes directly in the
+current working directory on the currently checked-out branch. I will
+handle branching and merging myself.
+
+Show me the diff before saving.
