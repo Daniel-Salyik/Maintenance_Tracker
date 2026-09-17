@@ -24,8 +24,9 @@ Feature: User Authentication and Profile Management
     Then a new account should be created in the database
     And they should be automatically logged in and redirected to the bike setup wizard
 
-  # --- Section 2: OAuth Integration ---
+  # --- Section 2: OAuth Integration (Phase 2 - deferred, see SPECIFICATION.md 2.1/2.6) ---
 
+  @phase2
   Scenario: Successful authentication via Strava
     Given a user has a valid Strava account
     When the user clicks "Login with Strava"

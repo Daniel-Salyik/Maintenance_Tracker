@@ -86,7 +86,7 @@ Then('they should be automatically logged in and redirected to the bike setup wi
   expect(this.lastResponse.body.redirectTo).to.equal('/setup-wizard');
 });
 
-// --- Section 2: OAuth Integration ---
+// --- Section 2: OAuth Integration (@phase2 - excluded from default run, see SPECIFICATION.md 2.1/2.6) ---
 
 Given('a user has a valid Strava account', async function () {
   // Setup nock for Strava token exchange
@@ -147,6 +147,18 @@ When('the user changes their distance preference to {string} in settings', async
     .patch('/user/preferences')
     .set('Authorization', `Bearer ${this.currentToken}`)
     .send({ distanceUnit: unit });
+});
+
+Given('a logged-in user whose currency is set to {string}', async function (currency) {
+  const email = `pref-${Date.now()}@example.com`;
+  await request(API_URL).post('/auth/register').send({ email, password: 'Password123!' });
+  const login = await request(API_URL).post('/auth/login').send({ email, password: 'Password123!' });
+  this.currentToken = login.body.token;
+
+  await request(API_URL)
+    .patch('/user/preferences')
+    .set('Authorization', `Bearer ${this.currentToken}`)
+    .send({ currency });
 });
 
 When('the user changes their currency preference to {string} in settings', async function (currency) {
