@@ -26,8 +26,15 @@ export async function findById(id: string) {
   return rows[0] ?? null;
 }
 
+const UPDATABLE_COLUMNS = ['distance_unit', 'currency'];
+
 export async function updatePreferences(id: string, fields: Record<string, string>) {
   const columns = Object.keys(fields);
+  const invalidColumn = columns.find((col) => !UPDATABLE_COLUMNS.includes(col));
+  if (invalidColumn) {
+    throw new Error(`Cannot update column: ${invalidColumn}`);
+  }
+
   const setClause = columns.map((col, i) => `${col} = $${i + 1}`).join(', ');
   const params = [...columns.map((col) => fields[col]), id];
 

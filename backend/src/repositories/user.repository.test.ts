@@ -115,4 +115,12 @@ describe('updatePreferences', () => {
     expect(params).toEqual(['mi', 'USD', '1']);
     expect(result).toEqual(row);
   });
+
+  it('rejects a column name not on the allowlist, never touches the DB', async () => {
+    await expect(
+      updatePreferences('1', { "currency = 'x'; DROP TABLE users;--": 'y' })
+    ).rejects.toThrow();
+
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
 });

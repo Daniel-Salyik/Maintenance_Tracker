@@ -13,7 +13,7 @@ export async function loginHandler(req: Request, res: Response) {
 }
 
 export async function verifyEmailHandler(req: Request, res: Response) {
-  const user = await findByEmail(req.params.email);
+  const user = await findByEmail(req.params.email as string);
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
