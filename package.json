@@ -7,12 +7,21 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "test": "run test"
+    "test": "node --import tsx ./node_modules/.bin/cucumber-js"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "express": "^5.2.1"
   },
   "devDependencies": {
-    "@cucumber/cucumber": "^13.2.1"
+    "@cucumber/cucumber": "^13.2.1",
+    "@types/chai": "^5.2.3",
+    "@types/node": "^22.20.3",
+    "@types/supertest": "^7.2.1",
+    "chai": "^6.2.2",
+    "nock": "^14.0.17",
+    "supertest": "^7.2.2",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.23.13"
   }
 }
