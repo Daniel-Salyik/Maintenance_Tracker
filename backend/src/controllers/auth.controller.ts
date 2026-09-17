@@ -4,7 +4,7 @@ import { findByEmail } from '../repositories/user.repository';
 
 export async function registerHandler(req: Request, res: Response) {
   const token = await register(req.body.email, req.body.password);
-  res.status(201).json({ token, redirectTo: '/setup-wizard' });
+  res.status(200).json({ token, redirectTo: '/setup-wizard' });
 }
 
 export async function loginHandler(req: Request, res: Response) {

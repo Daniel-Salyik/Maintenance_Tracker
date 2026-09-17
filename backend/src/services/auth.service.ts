@@ -14,10 +14,10 @@ function signToken(userId: string) {
 
 export async function register(email: string, password: string) {
   if (!EMAIL_RE.test(email)) {
-    throw new HttpError(400, 'Invalid email');
+    throw new HttpError(400, 'Invalid email format');
   }
   if (password.length < MIN_PASSWORD_LENGTH) {
-    throw new HttpError(400, 'Password too weak');
+    throw new HttpError(400, 'Password does not meet strength requirements');
   }
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
