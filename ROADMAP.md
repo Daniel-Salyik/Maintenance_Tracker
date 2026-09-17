@@ -14,11 +14,11 @@ This file tracks the atomic progression of the backend development. Each task co
 | Waiting | **#3.1: Validation Schema** | `infra/validation` | Infra | Integrate Zod/Joi for shared request validation middleware. |
 | Waiting | **#3.2: Global Error Handler** | `infra/error-handler` | Infra | Implement central middleware for consistent API error responses. |
 | Done | **#4.0: Multi-tenancy BDD** | `feat-bdd-plan` | Shift-Left | Define IDOR scenarios and negative tests for cross-user data isolation. |
-| Waiting | **#4.1: Isolation Step Definitions** | `feat/isolation` | TDD Red | Define Cucumber steps for `isolation.feature`. |
+| Done | **#4.1: Isolation Step Definitions** | `feat/user-auth` | TDD Red | Isolation scenario folded into `auth.feature`; steps implemented in `auth.steps.ts` (no separate `isolation.feature`). |
 | Waiting | **#4.2: Isolation Middleware & Repo Filters** | `feat/isolation` | TDD Green | Middleware to scope every query by authenticated user_id. |
 | Waiting | **#4.3: Isolation Refactor** | `feat/isolation` | Refactor | Clean up and BDD verification across all resources. |
 | Waiting | **#5: User Auth Implementation** | `feat/user-auth` | Shift-Left | Implement Auth logic using TDD. |
-| Waiting | **#5.1: Auth Step Definitions** | `feat/user-auth` | TDD Red | Define Cucumber steps for `auth.feature`. |
+| Done | **#5.1: Auth Step Definitions** | `feat/user-auth` | TDD Red | Cucumber steps for `auth.feature` implemented in `auth.steps.ts` (registration, login, preferences, isolation). |
 | Waiting | **#5.2: UserRepository** | `feat/user-auth` | TDD Green | PostgreSQL data access for Users. |
 | Waiting | **#5.3: AuthService** | `feat/user-auth` | TDD Green | Password hashing and JWT logic. |
 | Waiting | **#5.4: AuthController** | `feat/user-auth` | TDD Green | HTTP endpoints for reg/login. |
