@@ -76,6 +76,46 @@ Feature: User Authentication and Profile Management
     Then all financial costs and totals should be displayed in "EUR"
     And the preference should be persisted in the database
 
+  Scenario: Rejecting an invalid distance unit
+    Given a logged-in user whose distance unit is set to "Kilometers"
+    When the user changes their distance preference to "Parsecs" in settings
+    Then they should see a preferences error message "Invalid distance unit"
+    And the "distance unit" preference should remain unchanged
+
+  Scenario: Rejecting an invalid currency code
+    Given a logged-in user whose currency is set to "USD"
+    When the user changes their currency preference to "XYZ" in settings
+    Then they should see a preferences error message "Invalid currency code"
+    And the "currency" preference should remain unchanged
+
+  Scenario: Preferences update requires authentication
+    When the user attempts to update preferences without authentication
+    Then they should see an error message "Unauthorized"
+
+  Scenario: User cannot update another user's preferences
+    Given User A has a bike named "Red Trek"
+    And User B has a bike named "Blue Giant"
+    When User B attempts to update User A's preferences directly
+    Then the system should return a "403 Forbidden" or "Not Found" error
+    And User A's preferences should remain unchanged
+
+  Scenario: Partial preference update leaves other preference unchanged
+    Given a logged-in user whose distance unit is set to "Miles"
+    And their currency is set to "EUR"
+    When the user changes their currency preference to "USD" in settings
+    And saves the changes
+    Then the "distance unit" preference should remain unchanged
+
+  Scenario: Empty preference update is a no-op
+    Given a logged-in user whose distance unit is set to "Kilometers"
+    When the user submits an empty preferences update
+    Then the "distance unit" preference should remain unchanged
+
+  Scenario: New user gets default preferences on registration
+    Given a new user provides a valid email "defaults@example.com" and a strong password
+    When they submit the registration form
+    Then their default distance unit should be "Kilometers" and currency should be "EUR"
+
   # --- Section 4: Security & Isolation ---
 
   Scenario: Strict data isolation between users

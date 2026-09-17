@@ -158,7 +158,7 @@ Then('their Strava profile information should be linked to their app account', a
 
 // --- Section 3: User Preferences ---
 
-Given('a logged-in user whose distance unit is set to {string}', async function (unit) {
+Given('a logged-in user whose distance unit is set to {string}', async function (unit: string) {
   // Setup: Register -> Login -> Set Pref
   const email = `pref-${Date.now()}@example.com`;
   await request(API_URL).post('/auth/register').send({ email, password: 'Password123!' });
@@ -169,6 +169,17 @@ Given('a logged-in user whose distance unit is set to {string}', async function 
     .patch('/user/preferences')
     .set('Authorization', `Bearer ${this.currentToken}`)
     .send({ distanceUnit: unit });
+
+  this.expectedDistanceUnit = unit === 'Miles' ? 'mi' : 'km';
+});
+
+Given('their currency is set to {string}', async function (currency: string) {
+  await request(API_URL)
+    .patch('/user/preferences')
+    .set('Authorization', `Bearer ${this.currentToken}`)
+    .send({ currency });
+
+  this.expectedCurrency = currency;
 });
 
 When('the user changes their distance preference to {string} in settings', async function (unit) {
@@ -178,7 +189,7 @@ When('the user changes their distance preference to {string} in settings', async
     .send({ distanceUnit: unit });
 });
 
-Given('a logged-in user whose currency is set to {string}', async function (currency) {
+Given('a logged-in user whose currency is set to {string}', async function (currency: string) {
   const email = `pref-${Date.now()}@example.com`;
   await request(API_URL).post('/auth/register').send({ email, password: 'Password123!' });
   const login = await request(API_URL).post('/auth/login').send({ email, password: 'Password123!' });
@@ -188,6 +199,8 @@ Given('a logged-in user whose currency is set to {string}', async function (curr
     .patch('/user/preferences')
     .set('Authorization', `Bearer ${this.currentToken}`)
     .send({ currency });
+
+  this.expectedCurrency = currency;
 });
 
 When('the user changes their currency preference to {string} in settings', async function (currency) {
@@ -227,17 +240,81 @@ Then('the preference should be persisted in the database', async function () {
   expect(res.status).to.equal(200);
 });
 
+Then('they should see a preferences error message {string}', async function (message: string) {
+  expect(this.lastResponse.status).to.equal(400);
+  expect(this.lastResponse.body.error).to.equal(message);
+});
+
+Then('the {string} preference should remain unchanged', async function (preferenceName: string) {
+  const res = await request(API_URL)
+    .get('/user/dashboard')
+    .set('Authorization', `Bearer ${this.currentToken}`);
+
+  expect(res.status).to.equal(200);
+  if (preferenceName === 'distance unit') {
+    expect(res.body.units).to.equal(this.expectedDistanceUnit);
+  } else {
+    expect(res.body.currency).to.equal(this.expectedCurrency);
+  }
+});
+
+When('the user attempts to update preferences without authentication', async function () {
+  this.lastResponse = await request(API_URL)
+    .patch('/user/preferences')
+    .send({ distanceUnit: 'Miles' });
+});
+
+When('the user submits an empty preferences update', async function () {
+  this.lastResponse = await request(API_URL)
+    .patch('/user/preferences')
+    .set('Authorization', `Bearer ${this.currentToken}`)
+    .send({});
+});
+
+Then('their default distance unit should be {string} and currency should be {string}', async function (unit: string, currency: string) {
+  const token = this.lastResponse.body.token;
+  const res = await request(API_URL)
+    .get('/user/profile')
+    .set('Authorization', `Bearer ${token}`);
+
+  expect(res.status).to.equal(200);
+  expect(res.body.distanceUnit).to.equal(unit === 'Miles' ? 'mi' : 'km');
+  expect(res.body.currency).to.equal(currency);
+});
+
+When('User B attempts to update User A\'s preferences directly', async function () {
+  this.lastResponse = await request(API_URL)
+    .patch(`/users/${this.userAId}/preferences`)
+    .set('Authorization', `Bearer ${this.otherUserToken}`)
+    .send({ currency: 'GBP' });
+});
+
+Then('User A\'s preferences should remain unchanged', async function () {
+  const res = await request(API_URL)
+    .get('/user/profile')
+    .set('Authorization', `Bearer ${this.userAToken}`);
+
+  expect(res.status).to.equal(200);
+  expect(res.body.currency).to.not.equal('GBP');
+});
+
 // --- Section 4: Security & Isolation ---
 
-Given('User A has a bike named {string}', async function (bikeName) {
+Given('User A has a bike named {string}', async function (bikeName: string) {
   const emailA = `userA-${Date.now()}@example.com`;
   await request(API_URL).post('/auth/register').send({ email: emailA, password: 'PasswordA' });
   const loginA = await request(API_URL).post('/auth/login').send({ email: emailA, password: 'PasswordA' });
+  this.userAToken = loginA.body.token;
+
+  const profileA = await request(API_URL)
+    .get('/user/profile')
+    .set('Authorization', `Bearer ${this.userAToken}`);
+  this.userAId = profileA.body.id;
 
   // Need token to create bike
   await request(API_URL)
     .post('/bikes')
-    .set('Authorization', `Bearer ${loginA.body.token}`)
+    .set('Authorization', `Bearer ${this.userAToken}`)
     .send({ name: bikeName });
 });
 
