@@ -6,7 +6,7 @@ A proactive web application for individual cyclists to track component wear, log
 ## 2. Core Features
 
 ### 2.1 User Management & Auth
-- **Authentication:** Secure user accounts via OAuth (integrating with Strava/Garmin/Google) and standard Email/Password.
+- **Authentication:** Secure user accounts via standard Email/Password. OAuth (Strava/Garmin/Google) deferred to Phase 2, see 2.6.
 - **User Preferences:**
     - Distance Units (Kilometers vs Miles).
     - Currency Preference (e.g., USD, EUR, GBP).
@@ -52,7 +52,8 @@ A proactive web application for individual cyclists to track component wear, log
 - **Analytics:** Calculation of total cost, average cost per year/km.
 - **Data Portability:** Ability to export service history to CSV or PDF for maintenance records/resale.
 
-### 2.6 The "Dream Feature": Intelligent Intervals
+### 2.6 The "Dream Feature": Intelligent Intervals (Phase 2)
+- **OAuth:** Strava/Garmin/Google login, deferred here from 2.1.
 - **Data Integration:** Pull distance/activity from 3rd party fitness trackers (Strava/Garmin).
 - **Smart Recommendations:** Calculate recommended service periods based on:
     - `Bike Specs` + `User Weight` + `Activity Patterns` + `Travelled Distance`.
