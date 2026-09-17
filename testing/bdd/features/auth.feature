@@ -89,8 +89,10 @@ Feature: User Authentication and Profile Management
     And the "currency" preference should remain unchanged
 
   Scenario: Preferences update requires authentication
+    Given a logged-in user whose distance unit is set to "Kilometers"
     When the user attempts to update preferences without authentication
     Then they should see an error message "Unauthorized"
+    And the "distance unit" preference should remain unchanged
 
   Scenario: User cannot update another user's preferences
     Given User A has a bike named "Red Trek"

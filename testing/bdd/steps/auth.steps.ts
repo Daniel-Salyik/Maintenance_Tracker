@@ -34,7 +34,7 @@ When('the user enters {string} and {string} on the login page', async function (
     .send({ email, password });
 });
 
-When('clicks the {string} button', async function () {
+When('clicks the {string} button', async function (_buttonText: string) {
   // Request already sent in previous step
 });
 
@@ -337,7 +337,7 @@ When('User B attempts to access the bike profile of {string} via a direct URL', 
     .set('Authorization', `Bearer ${this.otherUserToken}`);
 });
 
-Then('the system should return a {string} or {string} error', async function (err1, err2) {
+Then('the system should return a {string} or {string} error', async function (_err1: string, _err2: string) {
   expect(this.lastResponse.status).to.be.oneOf([403, 404]);
 });
 
