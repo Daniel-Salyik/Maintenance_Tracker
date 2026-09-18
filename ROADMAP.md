@@ -17,11 +17,11 @@ This file tracks the atomic progression of the backend development. Each task co
 | Done | **#4.1: Isolation Step Definitions** | `feat/user-auth` | TDD Red | Isolation scenario folded into `auth.feature`; steps implemented in `auth.steps.ts` (no separate `isolation.feature`). |
 | Waiting | **#4.2: Isolation Middleware & Repo Filters** | `feat/isolation` | TDD Green | Middleware to scope every query by authenticated user_id. |
 | Waiting | **#4.3: Isolation Refactor** | `feat/isolation` | Refactor | Clean up and BDD verification across all resources. |
-| Waiting | **#5: User Auth Implementation** | `feat/user-auth` | Shift-Left | Implement Auth logic using TDD. |
+| Done | **#5: User Auth Implementation** | `feat/user-auth` | Shift-Left | Implement Auth logic using TDD. |
 | Done | **#5.1: Auth Step Definitions** | `feat/user-auth` | TDD Red | Cucumber steps for `auth.feature` implemented in `auth.steps.ts` (registration, login, preferences, isolation). |
-| Waiting | **#5.2: UserRepository** | `feat/user-auth` | TDD Green | PostgreSQL data access for Users. |
-| Waiting | **#5.3: AuthService** | `feat/user-auth` | TDD Green | Password hashing and JWT logic. |
-| Waiting | **#5.4: AuthController** | `feat/user-auth` | TDD Green | HTTP endpoints for reg/login. |
+| Done | **#5.2: UserRepository** | `feat/user-auth` | TDD Green | PostgreSQL data access for Users. |
+| Done | **#5.3: AuthService** | `feat/user-auth` | TDD Green | Password hashing and JWT logic. |
+| Done | **#5.4: AuthController** | `feat/user-auth` | TDD Green | HTTP endpoints for reg/login. |
 | Waiting | **#5.5: Auth Refactor** | `feat/user-auth` | Refactor | Clean up and BDD verification. |
 | Done | **#6: Bike Management BDD** | `feat-bdd-plan` | Shift-Left | Define Gherkin scenarios for Bike CRUD, including max-3-bikes limit edge case. |
 | Waiting | **#7: Bike Management Impl** | `feat/bike-mgmt` | Shift-Left | Implement Bike endpoints using TDD. |
