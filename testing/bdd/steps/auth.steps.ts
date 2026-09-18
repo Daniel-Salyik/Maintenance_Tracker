@@ -310,6 +310,16 @@ Then('User A\'s preferences should remain unchanged', async function () {
 
 // --- Section 4: Security & Isolation ---
 
+function fullBikeBody(name: string) {
+  return {
+    name,
+    frameNumber: `FR-${Date.now()}`,
+    modelType: 'Road Bike',
+    modelYear: 2023,
+    specs: { tireWidth: '25mm' },
+  };
+}
+
 Given('User A has a bike named {string}', async function (bikeName: string) {
   const emailA = `userA-${Date.now()}@example.com`;
   await request(API_URL).post('/auth/register').send({ email: emailA, password: 'PasswordA' });
@@ -321,11 +331,12 @@ Given('User A has a bike named {string}', async function (bikeName: string) {
     .set('Authorization', `Bearer ${this.userAToken}`);
   this.userAId = profileA.body.id;
 
-  // Need token to create bike
-  await request(API_URL)
+  this.bikeIdsByName = this.bikeIdsByName || {};
+  const createRes = await request(API_URL)
     .post('/bikes')
     .set('Authorization', `Bearer ${this.userAToken}`)
-    .send({ name: bikeName });
+    .send(fullBikeBody(bikeName));
+  this.bikeIdsByName[bikeName] = createRes.body.id;
 });
 
 Given('User B has a bike named {string}', async function (bikeName) {
@@ -335,15 +346,17 @@ Given('User B has a bike named {string}', async function (bikeName) {
 
   this.otherUserToken = loginB.body.token;
 
-  await request(API_URL)
+  this.bikeIdsByName = this.bikeIdsByName || {};
+  const createRes = await request(API_URL)
     .post('/bikes')
     .set('Authorization', `Bearer ${this.otherUserToken}`)
-    .send({ name: bikeName });
+    .send(fullBikeBody(bikeName));
+  this.bikeIdsByName[bikeName] = createRes.body.id;
 });
 
 When('User B attempts to access the bike profile of {string} via a direct URL', async function (bikeName) {
   this.lastResponse = await request(API_URL)
-    .get(`/bikes/${bikeName}`)
+    .get(`/bikes/${this.bikeIdsByName[bikeName]}`)
     .set('Authorization', `Bearer ${this.otherUserToken}`);
 });
 

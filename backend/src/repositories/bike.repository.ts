@@ -1,4 +1,5 @@
 import { pool } from '../config/db';
+import { HttpError } from '../utils/http-error';
 
 const COLUMN_MAP: Record<string, string> = {
   name: 'name',
@@ -58,7 +59,7 @@ export async function updateBike(bikeId: string, patch: Record<string, any>) {
   const columns = keys.map((key) => {
     const column = COLUMN_MAP[key];
     if (!column) {
-      throw new Error(`Cannot update column: ${key}`);
+      throw new HttpError(400, `Cannot update field: ${key}`);
     }
     return column;
   });
