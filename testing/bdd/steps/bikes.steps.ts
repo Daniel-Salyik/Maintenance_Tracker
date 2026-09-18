@@ -11,9 +11,21 @@ const API_URL = process.env.API_URL || 'http://localhost:3000';
 async function loginNewUser(world: any) {
   const email = faker.internet.email();
   const password = 'Password123!';
-  await request(API_URL).post('/auth/register').send({ email, password });
+  const register = await request(API_URL).post('/auth/register').send({ email, password });
+  expect(register.status, 'test setup: user registration failed').to.be.oneOf([200, 201]);
+
   const login = await request(API_URL).post('/auth/login').send({ email, password });
+  expect(login.status, 'test setup: user login failed').to.equal(200);
   world.currentToken = login.body.token;
+}
+
+async function bikeCount(world: any): Promise<number> {
+  const res = await request(API_URL)
+    .get('/bikes')
+    .set('Authorization', `Bearer ${world.currentToken}`);
+
+  expect(res.status, 'test setup: fetching bike list failed').to.equal(200);
+  return res.body.length;
 }
 
 function defaultBikeBody() {
@@ -128,7 +140,7 @@ Given('a user already has 3 bikes in their garage', async function () {
     await request(API_URL)
       .post('/bikes')
       .set('Authorization', `Bearer ${this.currentToken}`)
-      .send({ ...defaultBikeBody(), name: faker.commerce.productName() });
+      .send({ ...defaultBikeBody(), name: faker.vehicle.bicycle() });
   }
 });
 
@@ -136,7 +148,7 @@ When('the user attempts to add a 4th bike', async function () {
   this.lastResponse = await request(API_URL)
     .post('/bikes')
     .set('Authorization', `Bearer ${this.currentToken}`)
-    .send({ ...defaultBikeBody(), name: faker.commerce.productName() });
+    .send({ ...defaultBikeBody(), name: faker.vehicle.bicycle() });
 });
 
 Then('the system should block the addition', async function () {
@@ -148,19 +160,14 @@ Then('display an error message {string}', async function (message: string) {
 });
 
 Then('the total bike count should remain at 3', async function () {
-  const res = await request(API_URL)
-    .get('/bikes')
-    .set('Authorization', `Bearer ${this.currentToken}`);
-
-  expect(res.status).to.equal(200);
-  expect(res.body).to.have.length(3);
+  expect(await bikeCount(this)).to.equal(3);
 });
 
 Given('a user has the maximum limit of 3 bikes', async function () {
   await loginNewUser(this);
   this.bikeNames = [];
   for (let i = 0; i < 3; i++) {
-    const name = faker.commerce.productName();
+    const name = faker.vehicle.bicycle();
     await request(API_URL)
       .post('/bikes')
       .set('Authorization', `Bearer ${this.currentToken}`)
@@ -180,7 +187,7 @@ When('the user attempts to add a new bike', async function () {
   this.lastResponse = await request(API_URL)
     .post('/bikes')
     .set('Authorization', `Bearer ${this.currentToken}`)
-    .send({ ...defaultBikeBody(), name: faker.commerce.productName() });
+    .send({ ...defaultBikeBody(), name: faker.vehicle.bicycle() });
 });
 
 Then('the system should successfully allow the addition', async function () {
@@ -188,19 +195,14 @@ Then('the system should successfully allow the addition', async function () {
 });
 
 Then('the total bike count should return to 3', async function () {
-  const res = await request(API_URL)
-    .get('/bikes')
-    .set('Authorization', `Bearer ${this.currentToken}`);
-
-  expect(res.status).to.equal(200);
-  expect(res.body).to.have.length(3);
+  expect(await bikeCount(this)).to.equal(3);
 });
 
 // --- Section 3: Managing Existing Bikes ---
 
 Given('a bike exists in the user\'s fleet with {string} set to {string}', async function (specName: string, value: string) {
   await loginNewUser(this);
-  this.bikeName = faker.commerce.productName();
+  this.bikeName = faker.vehicle.bicycle();
   const body: any = defaultBikeBody();
   const key = SPEC_FIELD_TO_KEY[specName] || specName;
   body.specs[key] = value;
@@ -242,10 +244,11 @@ Then('the bike\'s profile should reflect the new description of {string}', async
 Given('a bike named {string} exists in the user\'s fleet', async function (bikeName: string) {
   await loginNewUser(this);
   this.bikeName = bikeName;
+  this.createdBike = { ...defaultBikeBody(), name: bikeName };
   await request(API_URL)
     .post('/bikes')
     .set('Authorization', `Bearer ${this.currentToken}`)
-    .send({ ...defaultBikeBody(), name: bikeName });
+    .send(this.createdBike);
 });
 
 When('the user selects {string} for the {string}', async function (_action: string, bikeName: string) {
@@ -272,9 +275,11 @@ Then('the user\'s available bike slots should increase by one', async function (
 });
 
 Given('the bike has since been deleted in another tab', async function () {
-  await request(API_URL)
+  const res = await request(API_URL)
     .delete(`/bikes/${this.bikeName}`)
     .set('Authorization', `Bearer ${this.currentToken}`);
+
+  expect(res.status, 'test setup: deleting the bike in the other tab failed').to.be.oneOf([200, 204]);
 });
 
 When('the user attempts to update the {string} via their stale page', async function (bikeName: string) {
@@ -306,7 +311,7 @@ Given('a logged-in user with {int} bikes in their garage', async function (count
     await request(API_URL)
       .post('/bikes')
       .set('Authorization', `Bearer ${this.currentToken}`)
-      .send({ ...defaultBikeBody(), name: faker.commerce.productName() });
+      .send({ ...defaultBikeBody(), name: faker.vehicle.bicycle() });
   }
 });
 
@@ -329,7 +334,12 @@ When('the user opens the profile for {string}', async function (bikeName: string
 
 Then('the profile should include the bike\'s full profile and specifications', async function () {
   expect(this.lastResponse.status).to.equal(200);
-  expect(this.lastResponse.body).to.include.keys('modelType', 'modelYear', 'frameNumber', 'description', 'specs');
+  const body = this.lastResponse.body;
+  expect(body.modelType).to.equal(this.createdBike.modelType);
+  expect(body.modelYear).to.equal(this.createdBike.modelYear);
+  expect(body.frameNumber).to.equal(this.createdBike.frameNumber);
+  expect(body.description).to.equal(this.createdBike.description);
+  expect(body.specs).to.deep.equal(this.createdBike.specs);
 });
 
 // --- Section 5: Security & Isolation ---
