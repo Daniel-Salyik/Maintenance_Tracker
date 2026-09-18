@@ -24,12 +24,12 @@ This file tracks the atomic progression of the backend development. Each task co
 | Done | **#5.4: AuthController** | `feat/user-auth` | TDD Green | HTTP endpoints for reg/login. |
 | Waiting | **#5.5: Auth Refactor** | `feat/user-auth` | Refactor | Clean up and BDD verification. |
 | Done | **#6: Bike Management BDD** | `feat-bdd-plan` | Shift-Left | Define Gherkin scenarios for Bike CRUD, including max-3-bikes limit edge case. |
-| Waiting | **#7: Bike Management Impl** | `feat/bike-mgmt` | Shift-Left | Implement Bike endpoints using TDD. |
-| Waiting | **#7.1: Bike Step Definitions** | `feat/bike-mgmt` | TDD Red | Define Cucumber steps for `bikes.feature`. |
-| Waiting | **#7.2: BikeRepository** | `feat/bike-mgmt` | TDD Green | PostgreSQL data access for Bikes. |
-| Waiting | **#7.3: BikeService** | `feat/bike-mgmt` | TDD Green | Implement bike CRUD and max 3 limit. |
-| Waiting | **#7.4: BikeController** | `feat/bike-mgmt` | TDD Green | HTTP endpoints for Bike management. |
-| Waiting | **#7.5: Bike Refactor** | `feat/bike-mgmt` | Refactor | Clean up and BDD verification. |
+| Done | **#7: Bike Management Impl** | `feat/bike-mgmt` | Shift-Left | Implement Bike endpoints using TDD. |
+| Done | **#7.1: Bike Step Definitions** | `feat/bike-mgmt` | TDD Red | Define Cucumber steps for `bikes.feature`. |
+| Done | **#7.2: BikeRepository** | `feat/bike-mgmt` | TDD Green | PostgreSQL data access for Bikes. |
+| Done | **#7.3: BikeService** | `feat/bike-mgmt` | TDD Green | Implement bike CRUD and max 3 limit. |
+| Done | **#7.4: BikeController** | `feat/bike-mgmt` | TDD Green | HTTP endpoints for Bike management. |
+| Done | **#7.5: Bike Refactor** | `feat/bike-mgmt` | Refactor | Clean up and BDD verification. |
 | Done | **#8: Components BDD** | `feat-bdd-plan` | Shift-Left | Define Gherkin scenarios for Wear & Tear, Overrides, negative mileage input, and component deletion with existing logs. |
 | Waiting | **#9: Component Tracking Impl** | `feat/comp-tracking` | Shift-Left | Implement Component endpoints using TDD. |
 | Waiting | **#9.1: Comp Step Definitions** | `feat/comp-tracking` | TDD Red | Define Cucumber steps for `components.feature`. |
