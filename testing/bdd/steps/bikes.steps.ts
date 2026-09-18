@@ -76,7 +76,7 @@ When('the user provides the following bike profile:', async function (dataTable)
   this.bikeProfile = {};
   for (const row of rows) {
     const key = PROFILE_FIELD_TO_KEY[row.Field] || row.Field;
-    this.bikeProfile[key] = row.Value;
+    this.bikeProfile[key] = key === 'modelYear' ? Number(row.Value) : row.Value;
   }
 });
 
@@ -137,10 +137,11 @@ Then('display an error: {string}', async function (message: string) {
 Given('a user already has 3 bikes in their garage', async function () {
   await loginNewUser(this);
   for (let i = 0; i < 3; i++) {
-    await request(API_URL)
+    const res = await request(API_URL)
       .post('/bikes')
       .set('Authorization', `Bearer ${this.currentToken}`)
       .send({ ...defaultBikeBody(), name: faker.vehicle.bicycle() });
+    expect(res.status, 'test setup: seeding a bike failed').to.be.oneOf([200, 201]);
   }
 });
 
@@ -168,10 +169,11 @@ Given('a user has the maximum limit of 3 bikes', async function () {
   this.bikeNames = [];
   for (let i = 0; i < 3; i++) {
     const name = faker.vehicle.bicycle();
-    await request(API_URL)
+    const res = await request(API_URL)
       .post('/bikes')
       .set('Authorization', `Bearer ${this.currentToken}`)
       .send({ ...defaultBikeBody(), name });
+    expect(res.status, 'test setup: seeding a bike failed').to.be.oneOf([200, 201]);
     this.bikeNames.push(name);
   }
 });
@@ -206,10 +208,11 @@ Given('a bike exists in the user\'s fleet with {string} set to {string}', async 
   const body: any = defaultBikeBody();
   const key = SPEC_FIELD_TO_KEY[specName] || specName;
   body.specs[key] = value;
-  await request(API_URL)
+  const res = await request(API_URL)
     .post('/bikes')
     .set('Authorization', `Bearer ${this.currentToken}`)
     .send({ ...body, name: this.bikeName });
+  expect(res.status, 'test setup: creating the bike failed').to.be.oneOf([200, 201]);
 });
 
 When('the user updates the {string} to {string} in the bike settings', async function (fieldName: string, value: string) {
@@ -245,10 +248,11 @@ Given('a bike named {string} exists in the user\'s fleet', async function (bikeN
   await loginNewUser(this);
   this.bikeName = bikeName;
   this.createdBike = { ...defaultBikeBody(), name: bikeName };
-  await request(API_URL)
+  const res = await request(API_URL)
     .post('/bikes')
     .set('Authorization', `Bearer ${this.currentToken}`)
     .send(this.createdBike);
+  expect(res.status, 'test setup: creating the bike failed').to.be.oneOf([200, 201]);
 });
 
 When('the user selects {string} for the {string}', async function (_action: string, bikeName: string) {
@@ -308,10 +312,11 @@ Given('a logged-in user with an empty garage', async function () {
 Given('a logged-in user with {int} bikes in their garage', async function (count: number) {
   await loginNewUser(this);
   for (let i = 0; i < count; i++) {
-    await request(API_URL)
+    const res = await request(API_URL)
       .post('/bikes')
       .set('Authorization', `Bearer ${this.currentToken}`)
       .send({ ...defaultBikeBody(), name: faker.vehicle.bicycle() });
+    expect(res.status, 'test setup: seeding a bike failed').to.be.oneOf([200, 201]);
   }
 });
 
