@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import { authRoutes } from './routes/auth.routes';
 import { userRoutes, usersRoutes } from './routes/user.routes';
+import { bikeRoutes } from './routes/bike.routes';
 import { testRoutes } from './routes/test.routes';
 import { errorMiddleware } from './middleware/error.middleware';
 
@@ -17,6 +18,7 @@ app.get('/health', (req: Request, res: Response) => {
 app.use('/auth', authRoutes);
 app.use('/user', userRoutes);
 app.use('/users', usersRoutes);
+app.use('/bikes', bikeRoutes);
 
 if (process.env.NODE_ENV !== 'production') {
   app.use('/test', testRoutes);

@@ -9,7 +9,10 @@ const REQUIRED_FIELDS: Record<string, string> = {
 
 const MAX_BIKES = 3;
 
-function assertOwned(bike: any, userId: string) {
+function assertOwned<T extends { userId: string } | null>(
+  bike: T,
+  userId: string
+): asserts bike is NonNullable<T> {
   if (!bike || bike.userId !== userId) {
     throw new HttpError(404, 'Bike not found');
   }

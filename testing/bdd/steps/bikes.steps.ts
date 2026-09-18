@@ -84,7 +84,7 @@ When('provides the following specifications:', async function (dataTable) {
   const rows: { Spec: string; Value: string }[] = dataTable.hashes();
   const specs: Record<string, string> = {};
   for (const row of rows) {
-    specs[row.Spec] = row.Value;
+    specs[SPEC_FIELD_TO_KEY[row.Spec] || row.Spec] = row.Value;
   }
   this.lastResponse = await request(API_URL)
     .post('/bikes')
@@ -166,7 +166,7 @@ Then('the total bike count should remain at 3', async function () {
 
 Given('a user has the maximum limit of 3 bikes', async function () {
   await loginNewUser(this);
-  this.bikeNames = [];
+  this.bikeIds = [];
   for (let i = 0; i < 3; i++) {
     const name = faker.vehicle.bicycle();
     const res = await request(API_URL)
@@ -174,14 +174,14 @@ Given('a user has the maximum limit of 3 bikes', async function () {
       .set('Authorization', `Bearer ${this.currentToken}`)
       .send({ ...defaultBikeBody(), name });
     expect(res.status, 'test setup: seeding a bike failed').to.be.oneOf([200, 201]);
-    this.bikeNames.push(name);
+    this.bikeIds.push(res.body.id);
   }
 });
 
 When('the user deletes one of their bikes', async function () {
-  const name = this.bikeNames.pop();
+  const id = this.bikeIds.pop();
   await request(API_URL)
-    .delete(`/bikes/${name}`)
+    .delete(`/bikes/${id}`)
     .set('Authorization', `Bearer ${this.currentToken}`);
 });
 
@@ -213,6 +213,7 @@ Given('a bike exists in the user\'s fleet with {string} set to {string}', async 
     .set('Authorization', `Bearer ${this.currentToken}`)
     .send({ ...body, name: this.bikeName });
   expect(res.status, 'test setup: creating the bike failed').to.be.oneOf([200, 201]);
+  this.bikeId = res.body.id;
 });
 
 When('the user updates the {string} to {string} in the bike settings', async function (fieldName: string, value: string) {
@@ -221,14 +222,14 @@ When('the user updates the {string} to {string} in the bike settings', async fun
     : { [PROFILE_FIELD_TO_KEY[fieldName] || fieldName]: value };
 
   this.lastResponse = await request(API_URL)
-    .put(`/bikes/${this.bikeName}`)
+    .put(`/bikes/${this.bikeId}`)
     .set('Authorization', `Bearer ${this.currentToken}`)
     .send(body);
 });
 
 Then('the bike\'s profile should reflect the new width of {string}', async function (width: string) {
   const res = await request(API_URL)
-    .get(`/bikes/${this.bikeName}`)
+    .get(`/bikes/${this.bikeId}`)
     .set('Authorization', `Bearer ${this.currentToken}`);
 
   expect(res.status).to.equal(200);
@@ -237,7 +238,7 @@ Then('the bike\'s profile should reflect the new width of {string}', async funct
 
 Then('the bike\'s profile should reflect the new description of {string}', async function (description: string) {
   const res = await request(API_URL)
-    .get(`/bikes/${this.bikeName}`)
+    .get(`/bikes/${this.bikeId}`)
     .set('Authorization', `Bearer ${this.currentToken}`);
 
   expect(res.status).to.equal(200);
@@ -253,6 +254,7 @@ Given('a bike named {string} exists in the user\'s fleet', async function (bikeN
     .set('Authorization', `Bearer ${this.currentToken}`)
     .send(this.createdBike);
   expect(res.status, 'test setup: creating the bike failed').to.be.oneOf([200, 201]);
+  this.bikeId = res.body.id;
 });
 
 When('the user selects {string} for the {string}', async function (_action: string, bikeName: string) {
@@ -261,7 +263,7 @@ When('the user selects {string} for the {string}', async function (_action: stri
 
 When('confirms the deletion in the pop-up dialog', async function () {
   this.lastResponse = await request(API_URL)
-    .delete(`/bikes/${this.bikeName}`)
+    .delete(`/bikes/${this.bikeId}`)
     .set('Authorization', `Bearer ${this.currentToken}`);
 });
 
@@ -280,22 +282,22 @@ Then('the user\'s available bike slots should increase by one', async function (
 
 Given('the bike has since been deleted in another tab', async function () {
   const res = await request(API_URL)
-    .delete(`/bikes/${this.bikeName}`)
+    .delete(`/bikes/${this.bikeId}`)
     .set('Authorization', `Bearer ${this.currentToken}`);
 
   expect(res.status, 'test setup: deleting the bike in the other tab failed').to.be.oneOf([200, 204]);
 });
 
-When('the user attempts to update the {string} via their stale page', async function (bikeName: string) {
+When('the user attempts to update the {string} via their stale page', async function (_bikeName: string) {
   this.lastResponse = await request(API_URL)
-    .put(`/bikes/${bikeName}`)
+    .put(`/bikes/${this.bikeId}`)
     .set('Authorization', `Bearer ${this.currentToken}`)
     .send({ specs: { tireWidth: '30mm' } });
 });
 
-When('the user attempts to delete the {string} again via their stale page', async function (bikeName: string) {
+When('the user attempts to delete the {string} again via their stale page', async function (_bikeName: string) {
   this.lastResponse = await request(API_URL)
-    .delete(`/bikes/${bikeName}`)
+    .delete(`/bikes/${this.bikeId}`)
     .set('Authorization', `Bearer ${this.currentToken}`);
 });
 
@@ -331,9 +333,9 @@ Then('the garage should show {int} bikes', async function (count: number) {
   expect(this.lastResponse.body).to.have.length(count);
 });
 
-When('the user opens the profile for {string}', async function (bikeName: string) {
+When('the user opens the profile for {string}', async function (_bikeName: string) {
   this.lastResponse = await request(API_URL)
-    .get(`/bikes/${bikeName}`)
+    .get(`/bikes/${this.bikeId}`)
     .set('Authorization', `Bearer ${this.currentToken}`);
 });
 
@@ -356,14 +358,14 @@ Then('the profile should include the bike\'s full profile and specifications', a
 
 When('User B attempts to update the bike profile of {string} via a direct URL', async function (bikeName: string) {
   this.lastResponse = await request(API_URL)
-    .put(`/bikes/${bikeName}`)
+    .put(`/bikes/${this.bikeIdsByName[bikeName]}`)
     .set('Authorization', `Bearer ${this.otherUserToken}`)
     .send({ specs: { tireWidth: '30mm' } });
 });
 
 When('User B attempts to delete the bike profile of {string} via a direct URL', async function (bikeName: string) {
   this.lastResponse = await request(API_URL)
-    .delete(`/bikes/${bikeName}`)
+    .delete(`/bikes/${this.bikeIdsByName[bikeName]}`)
     .set('Authorization', `Bearer ${this.otherUserToken}`);
 });
 
