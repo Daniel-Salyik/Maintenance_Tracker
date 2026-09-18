@@ -52,7 +52,12 @@ export async function getBike(userId: string, bikeId: string) {
 export async function updateBike(userId: string, bikeId: string, patch: Record<string, any>) {
   const bike = await bikeRepository.findById(bikeId);
   assertOwned(bike, userId);
-  return bikeRepository.updateBike(bikeId, patch);
+
+  const mergedPatch = patch.specs
+    ? { ...patch, specs: { ...(bike.specs ?? {}), ...patch.specs } }
+    : patch;
+
+  return bikeRepository.updateBike(bikeId, mergedPatch);
 }
 
 export async function deleteBike(userId: string, bikeId: string) {
