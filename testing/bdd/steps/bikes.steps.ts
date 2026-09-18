@@ -32,16 +32,21 @@ function defaultBikeBody() {
   };
 }
 
-const FIELD_TO_KEY: Record<string, string> = {
+// Top-level profile fields
+const PROFILE_FIELD_TO_KEY: Record<string, string> = {
   'Frame Number': 'frameNumber',
   'Model Type': 'modelType',
-  'Model Year': 'modelYear'
+  'Model Year': 'modelYear',
+  'Description': 'description'
 };
 
-const FIELD_TO_ERROR: Record<string, string> = {
-  'Frame Number': 'Frame Number is required for registration',
-  'Model Type': 'Model Type is required for registration',
-  'Model Year': 'Model Year is required for registration'
+// Spec (nested) fields
+const SPEC_FIELD_TO_KEY: Record<string, string> = {
+  'Brake Type': 'brakeType',
+  'Tire Width': 'tireWidth',
+  'User Weight': 'userWeight',
+  'Number of Speeds': 'numSpeeds',
+  'Shifting Type': 'shiftingType'
 };
 
 // --- Section 1: Adding Bikes ---
@@ -58,7 +63,7 @@ When('the user provides the following bike profile:', async function (dataTable)
   const rows: { Field: string; Value: string }[] = dataTable.hashes();
   this.bikeProfile = {};
   for (const row of rows) {
-    const key = FIELD_TO_KEY[row.Field] || row.Field;
+    const key = PROFILE_FIELD_TO_KEY[row.Field] || row.Field;
     this.bikeProfile[key] = row.Value;
   }
 });
@@ -90,7 +95,7 @@ Then('the user should see the bike listed in their garage', async function () {
 
 When('the user attempts to save a bike without a {string}', async function (fieldName: string) {
   const body: any = defaultBikeBody();
-  delete body[FIELD_TO_KEY[fieldName] || fieldName];
+  delete body[PROFILE_FIELD_TO_KEY[fieldName] || fieldName];
   this.lastResponse = await request(API_URL)
     .post('/bikes')
     .set('Authorization', `Bearer ${this.currentToken}`)
@@ -99,7 +104,7 @@ When('the user attempts to save a bike without a {string}', async function (fiel
 
 When('the user attempts to save a bike with a {string} of {string}', async function (specName: string, value: string) {
   const body: any = defaultBikeBody();
-  const key = specName === 'Tire Width' ? 'tireWidth' : specName;
+  const key = SPEC_FIELD_TO_KEY[specName] || specName;
   body.specs[key] = value;
   this.lastResponse = await request(API_URL)
     .post('/bikes')
@@ -140,6 +145,15 @@ Then('the system should block the addition', async function () {
 
 Then('display an error message {string}', async function (message: string) {
   expect(this.lastResponse.body.error).to.equal(message);
+});
+
+Then('the total bike count should remain at 3', async function () {
+  const res = await request(API_URL)
+    .get('/bikes')
+    .set('Authorization', `Bearer ${this.currentToken}`);
+
+  expect(res.status).to.equal(200);
+  expect(res.body).to.have.length(3);
 });
 
 Given('a user has the maximum limit of 3 bikes', async function () {
@@ -188,7 +202,7 @@ Given('a bike exists in the user\'s fleet with {string} set to {string}', async 
   await loginNewUser(this);
   this.bikeName = faker.commerce.productName();
   const body: any = defaultBikeBody();
-  const key = specName === 'Tire Width' ? 'tireWidth' : specName;
+  const key = SPEC_FIELD_TO_KEY[specName] || specName;
   body.specs[key] = value;
   await request(API_URL)
     .post('/bikes')
@@ -196,12 +210,15 @@ Given('a bike exists in the user\'s fleet with {string} set to {string}', async 
     .send({ ...body, name: this.bikeName });
 });
 
-When('the user updates the {string} to {string} in the bike settings', async function (specName: string, value: string) {
-  const key = specName === 'Tire Width' ? 'tireWidth' : specName;
+When('the user updates the {string} to {string} in the bike settings', async function (fieldName: string, value: string) {
+  const body: any = SPEC_FIELD_TO_KEY[fieldName]
+    ? { specs: { [SPEC_FIELD_TO_KEY[fieldName]]: value } }
+    : { [PROFILE_FIELD_TO_KEY[fieldName] || fieldName]: value };
+
   this.lastResponse = await request(API_URL)
     .put(`/bikes/${this.bikeName}`)
     .set('Authorization', `Bearer ${this.currentToken}`)
-    .send({ specs: { [key]: value } });
+    .send(body);
 });
 
 Then('the bike\'s profile should reflect the new width of {string}', async function (width: string) {
@@ -213,12 +230,13 @@ Then('the bike\'s profile should reflect the new width of {string}', async funct
   expect(res.body.specs.tireWidth).to.equal(width);
 });
 
-Then('the change should be persisted in the database', async function () {
+Then('the bike\'s profile should reflect the new description of {string}', async function (description: string) {
   const res = await request(API_URL)
     .get(`/bikes/${this.bikeName}`)
     .set('Authorization', `Bearer ${this.currentToken}`);
 
   expect(res.status).to.equal(200);
+  expect(res.body.description).to.equal(description);
 });
 
 Given('a bike named {string} exists in the user\'s fleet', async function (bikeName: string) {
@@ -253,17 +271,27 @@ Then('the user\'s available bike slots should increase by one', async function (
   expect(this.lastResponse.status).to.be.oneOf([200, 204]);
 });
 
-When('the user attempts to update a bike that does not exist', async function () {
+Given('the bike has since been deleted in another tab', async function () {
+  await request(API_URL)
+    .delete(`/bikes/${this.bikeName}`)
+    .set('Authorization', `Bearer ${this.currentToken}`);
+});
+
+When('the user attempts to update the {string} via their stale page', async function (bikeName: string) {
   this.lastResponse = await request(API_URL)
-    .put(`/bikes/${faker.string.uuid()}`)
+    .put(`/bikes/${bikeName}`)
     .set('Authorization', `Bearer ${this.currentToken}`)
     .send({ specs: { tireWidth: '30mm' } });
 });
 
-When('the user attempts to delete a bike that does not exist', async function () {
+When('the user attempts to delete the {string} again via their stale page', async function (bikeName: string) {
   this.lastResponse = await request(API_URL)
-    .delete(`/bikes/${faker.string.uuid()}`)
+    .delete(`/bikes/${bikeName}`)
     .set('Authorization', `Bearer ${this.currentToken}`);
+});
+
+Then('the system should return a {string} error', async function (code: string) {
+  expect(this.lastResponse.status).to.equal(Number(code));
 });
 
 // --- Section 4: Listing and Viewing ---
@@ -299,9 +327,9 @@ When('the user opens the profile for {string}', async function (bikeName: string
     .set('Authorization', `Bearer ${this.currentToken}`);
 });
 
-Then('the profile should include the bike\'s specifications', async function () {
+Then('the profile should include the bike\'s full profile and specifications', async function () {
   expect(this.lastResponse.status).to.equal(200);
-  expect(this.lastResponse.body).to.have.property('specs');
+  expect(this.lastResponse.body).to.include.keys('modelType', 'modelYear', 'frameNumber', 'description', 'specs');
 });
 
 // --- Section 5: Security & Isolation ---
@@ -324,6 +352,15 @@ When('User B attempts to delete the bike profile of {string} via a direct URL', 
     .set('Authorization', `Bearer ${this.otherUserToken}`);
 });
 
-When('an unauthenticated user attempts to view the garage', async function () {
-  this.lastResponse = await request(API_URL).get('/bikes');
+When('an unauthenticated user attempts to {word} a bike', async function (action: string) {
+  const fakeId = faker.string.uuid();
+  if (action === 'view') {
+    this.lastResponse = await request(API_URL).get('/bikes');
+  } else if (action === 'add') {
+    this.lastResponse = await request(API_URL).post('/bikes').send(defaultBikeBody());
+  } else if (action === 'update') {
+    this.lastResponse = await request(API_URL).put(`/bikes/${fakeId}`).send({ specs: { tireWidth: '30mm' } });
+  } else if (action === 'delete') {
+    this.lastResponse = await request(API_URL).delete(`/bikes/${fakeId}`);
+  }
 });
