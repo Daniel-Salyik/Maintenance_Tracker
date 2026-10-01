@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import cors from 'cors';
 import express, { Request, Response } from 'express';
 import { authRoutes } from './routes/auth.routes';
 import { userRoutes, usersRoutes } from './routes/user.routes';
@@ -9,6 +10,7 @@ import { errorMiddleware } from './middleware/error.middleware';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173' }));
 app.use(express.json());
 
 app.get('/health', (req: Request, res: Response) => {
