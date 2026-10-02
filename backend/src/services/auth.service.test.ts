@@ -33,18 +33,18 @@ beforeEach(() => {
 });
 
 describe('register', () => {
-  it('hashes the password once and creates the user, returns a token', async () => {
+  it('hashes the password once and creates the user, does not log the user in', async () => {
     mockBcryptHash.mockResolvedValueOnce('hashed-pw');
     mockCreateUser.mockResolvedValueOnce({ id: '1', email: 'a@b.com' });
-    mockJwtSign.mockReturnValueOnce('signed-token');
 
-    const token = await register('a@b.com', 'SecurePassword123!');
+    const result = await register('a@b.com', 'SecurePassword123!');
 
     expect(mockBcryptHash).toHaveBeenCalledTimes(1);
     expect(mockBcryptHash).toHaveBeenCalledWith('SecurePassword123!', expect.any(Number));
     expect(mockCreateUser).toHaveBeenCalledTimes(1);
     expect(mockCreateUser).toHaveBeenCalledWith('a@b.com', 'hashed-pw');
-    expect(token).toBe('signed-token');
+    expect(result).toBeUndefined();
+    expect(mockJwtSign).not.toHaveBeenCalled();
   });
 
   it('rejects an invalid email format with HttpError 400, never touches the repository', async () => {
