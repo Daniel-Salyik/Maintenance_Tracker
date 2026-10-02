@@ -1,17 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { HttpError } from '../utils/http-error';
 
-const { mockCreateUser, mockFindByEmail, mockBcryptHash, mockBcryptCompare, mockJwtSign } = vi.hoisted(() => ({
+const { mockCreateUser, mockFindByEmail, mockBcryptHash, mockBcryptCompare, mockJwtSign, mockSendWelcome } = vi.hoisted(() => ({
   mockCreateUser: vi.fn(),
   mockFindByEmail: vi.fn(),
   mockBcryptHash: vi.fn(),
   mockBcryptCompare: vi.fn(),
   mockJwtSign: vi.fn(),
+  mockSendWelcome: vi.fn(),
 }));
 
 vi.mock('../repositories/user.repository', () => ({
   createUser: mockCreateUser,
   findByEmail: mockFindByEmail,
+}));
+
+vi.mock('./email.service', () => ({
+  sendWelcomeEmail: mockSendWelcome,
 }));
 
 vi.mock('bcrypt', () => ({
@@ -30,9 +35,36 @@ beforeEach(() => {
   mockBcryptHash.mockReset();
   mockBcryptCompare.mockReset();
   mockJwtSign.mockReset();
+  mockSendWelcome.mockReset();
 });
 
 describe('register', () => {
+  it('sends the welcome email once after the user is created', async () => {
+    mockBcryptHash.mockResolvedValueOnce('hashed-pw');
+    mockCreateUser.mockResolvedValueOnce({ id: '1', email: 'a@b.com' });
+
+    await register('a@b.com', 'SecurePassword123!');
+
+    expect(mockSendWelcome).toHaveBeenCalledTimes(1);
+    expect(mockSendWelcome).toHaveBeenCalledWith('a@b.com');
+  });
+
+  it('does not wait for the welcome email to finish', async () => {
+    mockBcryptHash.mockResolvedValueOnce('hashed-pw');
+    mockCreateUser.mockResolvedValueOnce({ id: '1', email: 'a@b.com' });
+    mockSendWelcome.mockReturnValueOnce(new Promise(() => {}));
+
+    await expect(register('a@b.com', 'SecurePassword123!')).resolves.toBeUndefined();
+  });
+
+  it('sends no welcome email when user creation fails', async () => {
+    mockBcryptHash.mockResolvedValueOnce('hashed-pw');
+    mockCreateUser.mockRejectedValueOnce(new HttpError(409, 'Email already registered'));
+
+    await expect(register('a@b.com', 'SecurePassword123!')).rejects.toMatchObject({ status: 409 });
+    expect(mockSendWelcome).not.toHaveBeenCalled();
+  });
+
   it('hashes the password once and creates the user, does not log the user in', async () => {
     mockBcryptHash.mockResolvedValueOnce('hashed-pw');
     mockCreateUser.mockResolvedValueOnce({ id: '1', email: 'a@b.com' });

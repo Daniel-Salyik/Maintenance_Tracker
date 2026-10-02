@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { createUser, findByEmail } from '../repositories/user.repository';
 import { HttpError } from '../utils/http-error';
+import { sendWelcomeEmail } from './email.service';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
@@ -22,6 +23,7 @@ export async function register(email: string, password: string) {
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
   await createUser(email, passwordHash);
+  void sendWelcomeEmail(email); // fire-and-forget, never throws
 }
 
 export async function login(email: string, password: string) {
