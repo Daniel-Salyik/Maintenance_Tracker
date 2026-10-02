@@ -7,7 +7,7 @@ vi.mock('resend', () => ({
   },
 }));
 
-import { sendEmail } from './email.service';
+import { sendEmail, sendWelcomeEmail, sendPasswordResetEmail } from './email.service';
 
 const msg = { to: 'a@b.com', subject: 'Hi', html: '<p>Hi</p>' };
 
@@ -55,5 +55,29 @@ describe('sendEmail', () => {
     send.mockResolvedValue({ data: null, error: { message: 'bad key' } });
     await expect(sendEmail(msg)).resolves.toBeUndefined();
     expect(log).toHaveBeenCalled();
+  });
+});
+
+describe('email templates', () => {
+  beforeEach(() => {
+    send.mockReset();
+    send.mockResolvedValue({ data: { id: '1' }, error: null });
+    process.env.NODE_ENV = 'development';
+  });
+
+  it('sendWelcomeEmail addresses the new user', async () => {
+    await sendWelcomeEmail('new@user.com');
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ to: 'new@user.com', subject: expect.stringMatching(/welcome/i) }),
+    );
+  });
+
+  it('sendPasswordResetEmail includes the reset link', async () => {
+    const link = 'http://localhost:5173/reset-password?token=abc123';
+    await sendPasswordResetEmail('u@user.com', link);
+    const arg = send.mock.calls[0][0];
+    expect(arg.to).toBe('u@user.com');
+    expect(arg.subject).toMatch(/reset/i);
+    expect(arg.html).toContain(`href="${link}"`);
   });
 });

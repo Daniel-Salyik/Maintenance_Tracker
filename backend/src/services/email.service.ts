@@ -22,3 +22,17 @@ export async function sendEmail({ to, subject, html }: Email): Promise<void> {
     console.error('Email send failed:', err);
   }
 }
+
+export const sendWelcomeEmail = (to: string) =>
+  sendEmail({
+    to,
+    subject: 'Welcome to Bike Maintenance Tracker',
+    html: '<p>Welcome! Your account is ready. Add your bike and start tracking its maintenance.</p>',
+  });
+
+export const sendPasswordResetEmail = (to: string, link: string) =>
+  sendEmail({
+    to,
+    subject: 'Reset your password',
+    html: `<p>Click the link to reset your password. It expires in 1 hour.</p><p><a href="${link}">Reset password</a></p><p>If you did not request this, ignore this email.</p>`,
+  });
