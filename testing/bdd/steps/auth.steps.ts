@@ -102,10 +102,19 @@ Then('a new account should be created in the database', async function () {
   expect(res.status).to.equal(200);
 });
 
-Then('they should be automatically logged in and redirected to the bike setup wizard', async function () {
-  expect(this.lastResponse.status).to.equal(200);
-  expect(this.lastResponse.body.token).to.exist;
-  expect(this.lastResponse.body.redirectTo).to.equal('/setup-wizard');
+Then('they should be redirected to the login page', async function () {
+  // Constraint: API cannot redirect. Contract is 201 with no redirectTo;
+  // the frontend sends the user to the login page.
+  expect(this.lastResponse.status).to.equal(201);
+  expect(this.lastResponse.body).to.not.have.property('redirectTo');
+});
+
+Then('they should see a message {string}', async function (message: string) {
+  expect(this.lastResponse.body.message).to.equal(message);
+});
+
+Then('they should not be logged in', async function () {
+  expect(this.lastResponse.body).to.not.have.property('token');
 });
 
 Then('they should see a registration error message {string}', async function (message: string) {
@@ -282,10 +291,11 @@ When('the user submits an empty preferences update', async function () {
 });
 
 Then('their default distance unit should be {string} and currency should be {string}', async function (unit: string, currency: string) {
-  const token = this.lastResponse.body.token;
+  // Register no longer returns a token, so log in first.
+  const login = await request(API_URL).post('/auth/login').send(this.registrationData);
   const res = await request(API_URL)
     .get('/user/profile')
-    .set('Authorization', `Bearer ${token}`);
+    .set('Authorization', `Bearer ${login.body.token}`);
 
   expect(res.status).to.equal(200);
   expect(res.body.distanceUnit).to.equal(unit === 'Miles' ? 'mi' : 'km');

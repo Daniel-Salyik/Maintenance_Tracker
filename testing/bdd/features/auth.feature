@@ -2,8 +2,12 @@ Feature: User Authentication and Profile Management
   As a cyclist, I want to securely manage my account and preferences
   so that my bike data remains private and the app displays information in my preferred units.
 
+  # Tags: @api = proven by the supertest steps in testing/bdd/steps.
+  #       @ui  = also needs a browser to prove (redirect, rendered message); Playwright steps come later.
+
   # --- Section 1: Standard Authentication ---
 
+  @api @ui
   Scenario: Successful login with email and password
     Given a registered user exists with email "cyclist@example.com" and password "SecurePass123"
     When the user enters "cyclist@example.com" and "SecurePass123" on the login page
@@ -11,6 +15,7 @@ Feature: User Authentication and Profile Management
     Then they should be redirected to the dashboard
     And they should see a welcome message "Welcome back!"
 
+  @api @ui
   Scenario: Failed login with incorrect credentials
     Given a registered user exists with email "cyclist@example.com" and password "SecurePass123"
     When the user enters "cyclist@example.com" and "WrongPassword" on the login page
@@ -18,12 +23,16 @@ Feature: User Authentication and Profile Management
     Then they should see an error message "Invalid email or password"
     And they should remain on the login page
 
-  Scenario: New user account creation
+  @api @ui
+  Scenario: Successful registration redirects to login with confirmation
     Given a new user provides a valid email "newuser@example.com" and a strong password
     When they submit the registration form
     Then a new account should be created in the database
-    And they should be automatically logged in and redirected to the bike setup wizard
+    And they should be redirected to the login page
+    And they should see a message "Registration successful. Please log in."
+    And they should not be logged in
 
+  @api @ui
   Scenario: Registration fails with an already-registered email
     Given a registered user exists with email "duplicate@example.com" and password "SecurePass123"
     When a new user provides a valid email "duplicate@example.com" and a strong password
@@ -31,18 +40,21 @@ Feature: User Authentication and Profile Management
     Then they should see a registration error message "Email already in use"
     And no new account should be created in the database
 
+  @api @ui
   Scenario: Registration fails with an invalid email format
     Given a new user provides an invalid email "not-an-email" and a strong password
     When they submit the registration form
     Then they should see a registration error message "Invalid email format"
     And no new account should be created in the database
 
+  @api @ui
   Scenario: Registration fails with a weak password
     Given a new user provides a valid email "weakpass@example.com" and a weak password "123"
     When they submit the registration form
     Then they should see a registration error message "Password does not meet strength requirements"
     And no new account should be created in the database
 
+  @api @ui
   Scenario: Login fails with a non-existent email
     Given no registered user exists with email "ghost@example.com"
     When the user enters "ghost@example.com" and "AnyPassword123" on the login page
@@ -52,7 +64,7 @@ Feature: User Authentication and Profile Management
 
   # --- Section 2: OAuth Integration (Phase 2 - deferred, see SPECIFICATION.md 2.1/2.6) ---
 
-  @phase2
+  @phase2 @ui
   Scenario: Successful authentication via Strava
     Given a user has a valid Strava account
     When the user clicks "Login with Strava"
@@ -62,6 +74,7 @@ Feature: User Authentication and Profile Management
 
   # --- Section 3: User Preferences ---
 
+  @api @ui
   Scenario: Updating distance unit preference
     Given a logged-in user whose distance unit is set to "Kilometers"
     When the user changes their distance preference to "Miles" in settings
@@ -69,6 +82,7 @@ Feature: User Authentication and Profile Management
     Then all distances on the dashboard should be displayed in "Miles"
     And the preference should be persisted in the database
 
+  @api @ui
   Scenario: Updating currency preference
     Given a logged-in user whose currency is set to "USD"
     When the user changes their currency preference to "EUR" in settings
@@ -76,24 +90,28 @@ Feature: User Authentication and Profile Management
     Then all financial costs and totals should be displayed in "EUR"
     And the preference should be persisted in the database
 
+  @api @ui
   Scenario: Rejecting an invalid distance unit
     Given a logged-in user whose distance unit is set to "Kilometers"
     When the user changes their distance preference to "Parsecs" in settings
     Then they should see a preferences error message "Invalid distance unit"
     And the "distance unit" preference should remain unchanged
 
+  @api @ui
   Scenario: Rejecting an invalid currency code
     Given a logged-in user whose currency is set to "USD"
     When the user changes their currency preference to "XYZ" in settings
     Then they should see a preferences error message "Invalid currency code"
     And the "currency" preference should remain unchanged
 
+  @api
   Scenario: Preferences update requires authentication
     Given a logged-in user whose distance unit is set to "Kilometers"
     When the user attempts to update preferences without authentication
     Then they should see an error message "Unauthorized"
     And the "distance unit" preference should remain unchanged
 
+  @api
   Scenario: User cannot update another user's preferences
     Given User A has a bike named "Red Trek"
     And User B has a bike named "Blue Giant"
@@ -101,6 +119,7 @@ Feature: User Authentication and Profile Management
     Then the system should return a "403 Forbidden" or "Not Found" error
     And User A's preferences should remain unchanged
 
+  @api
   Scenario: Partial preference update leaves other preference unchanged
     Given a logged-in user whose distance unit is set to "Miles"
     And their currency is set to "EUR"
@@ -108,11 +127,13 @@ Feature: User Authentication and Profile Management
     And saves the changes
     Then the "distance unit" preference should remain unchanged
 
+  @api
   Scenario: Empty preference update is a no-op
     Given a logged-in user whose distance unit is set to "Kilometers"
     When the user submits an empty preferences update
     Then the "distance unit" preference should remain unchanged
 
+  @api
   Scenario: New user gets default preferences on registration
     Given a new user provides a valid email "defaults@example.com" and a strong password
     When they submit the registration form
@@ -120,6 +141,7 @@ Feature: User Authentication and Profile Management
 
   # --- Section 4: Security & Isolation ---
 
+  @api
   Scenario: Strict data isolation between users
     Given User A has a bike named "Red Trek"
     And User B has a bike named "Blue Giant"
