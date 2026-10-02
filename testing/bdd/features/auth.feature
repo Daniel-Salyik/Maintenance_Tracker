@@ -62,6 +62,20 @@ Feature: User Authentication and Profile Management
     Then they should see an error message "Invalid email or password"
     And they should remain on the login page
 
+  @api @ui
+  Scenario: Login fails when the email is missing
+    When the user enters "" and "SecurePass123" on the login page
+    And clicks the "Login" button
+    Then they should see a validation message "Email and password are required"
+    And they should remain on the login page
+
+  @api @ui
+  Scenario: Login fails when the password is missing
+    When the user enters "cyclist@example.com" and "" on the login page
+    And clicks the "Login" button
+    Then they should see a validation message "Email and password are required"
+    And they should remain on the login page
+
   # --- Section 2: OAuth Integration (Phase 2 - deferred, see SPECIFICATION.md 2.1/2.6) ---
 
   @phase2 @ui
