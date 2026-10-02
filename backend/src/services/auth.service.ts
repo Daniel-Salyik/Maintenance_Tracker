@@ -21,8 +21,7 @@ export async function register(email: string, password: string) {
   }
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-  const user = await createUser(email, passwordHash);
-  return signToken(user.id);
+  await createUser(email, passwordHash);
 }
 
 export async function login(email: string, password: string) {

@@ -3,8 +3,8 @@ import { register, login } from '../services/auth.service';
 import { findByEmail } from '../repositories/user.repository';
 
 export async function registerHandler(req: Request, res: Response) {
-  const token = await register(req.body.email, req.body.password);
-  res.status(200).json({ token, redirectTo: '/setup-wizard' });
+  await register(req.body.email, req.body.password);
+  res.status(201).json({ message: 'Registration successful. Please log in.' });
 }
 
 export async function loginHandler(req: Request, res: Response) {
