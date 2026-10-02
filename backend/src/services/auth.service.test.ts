@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { HttpError } from '../utils/http-error';
 
-const { mockCreateUser, mockFindByEmail, mockBcryptHash, mockBcryptCompare, mockJwtSign, mockSendWelcome, mockSendReset, mockSetResetToken } = vi.hoisted(() => ({
+const { mockCreateUser, mockFindByEmail, mockBcryptHash, mockBcryptCompare, mockJwtSign, mockSendWelcome, mockSendReset, mockSetResetToken, mockFindByResetTokenHash, mockUpdatePassword } = vi.hoisted(() => ({
   mockCreateUser: vi.fn(),
   mockFindByEmail: vi.fn(),
   mockBcryptHash: vi.fn(),
@@ -10,12 +10,16 @@ const { mockCreateUser, mockFindByEmail, mockBcryptHash, mockBcryptCompare, mock
   mockSendWelcome: vi.fn(),
   mockSendReset: vi.fn(),
   mockSetResetToken: vi.fn(),
+  mockFindByResetTokenHash: vi.fn(),
+  mockUpdatePassword: vi.fn(),
 }));
 
 vi.mock('../repositories/user.repository', () => ({
   createUser: mockCreateUser,
   findByEmail: mockFindByEmail,
   setResetToken: mockSetResetToken,
+  findByResetTokenHash: mockFindByResetTokenHash,
+  updatePassword: mockUpdatePassword,
 }));
 
 vi.mock('./email.service', () => ({
@@ -32,7 +36,7 @@ vi.mock('jsonwebtoken', () => ({
 }));
 
 import { createHash } from 'crypto';
-import { register, login, forgotPassword, issueResetToken } from './auth.service';
+import { register, login, forgotPassword, issueResetToken, resetPassword } from './auth.service';
 
 beforeEach(() => {
   mockCreateUser.mockReset();
@@ -43,6 +47,8 @@ beforeEach(() => {
   mockSendWelcome.mockReset();
   mockSendReset.mockReset();
   mockSetResetToken.mockReset();
+  mockFindByResetTokenHash.mockReset();
+  mockUpdatePassword.mockReset();
 });
 
 describe('register', () => {
@@ -189,5 +195,43 @@ describe('issueResetToken', () => {
     expect(id).toBe('u1');
     expect(createHash('sha256').update(token).digest('hex')).toBe(hash);
     expect(expires.getTime()).toBeLessThan(before);
+  });
+});
+
+describe('resetPassword', () => {
+  it('looks up the token by hash, hashes the new password and updates the user', async () => {
+    mockFindByResetTokenHash.mockResolvedValueOnce({ id: 'u1' });
+    mockBcryptHash.mockResolvedValueOnce('new-hash');
+
+    await resetPassword('raw-token', 'NewSecurePass456');
+
+    expect(mockFindByResetTokenHash).toHaveBeenCalledWith(createHash('sha256').update('raw-token').digest('hex'));
+    expect(mockBcryptHash).toHaveBeenCalledWith('NewSecurePass456', expect.any(Number));
+    expect(mockUpdatePassword).toHaveBeenCalledWith('u1', 'new-hash');
+  });
+
+  it('rejects an unknown or expired token with HttpError 400, no update', async () => {
+    mockFindByResetTokenHash.mockResolvedValueOnce(null);
+
+    await expect(resetPassword('bad', 'NewSecurePass456')).rejects.toMatchObject({
+      status: 400,
+      message: 'Invalid or expired reset token',
+    });
+    expect(mockUpdatePassword).not.toHaveBeenCalled();
+  });
+
+  it('rejects a weak password with HttpError 400 before touching the repository', async () => {
+    await expect(resetPassword('raw-token', 'weak')).rejects.toMatchObject({
+      status: 400,
+      message: 'Password does not meet strength requirements',
+    });
+    expect(mockFindByResetTokenHash).not.toHaveBeenCalled();
+    expect(mockUpdatePassword).not.toHaveBeenCalled();
+  });
+
+  it('rejects a missing token or password with HttpError 400', async () => {
+    await expect(resetPassword(undefined as any, 'NewSecurePass456')).rejects.toMatchObject({ status: 400 });
+    await expect(resetPassword('raw-token', undefined as any)).rejects.toMatchObject({ status: 400 });
+    expect(mockUpdatePassword).not.toHaveBeenCalled();
   });
 });

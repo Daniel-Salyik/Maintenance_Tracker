@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { createHash, randomBytes } from 'crypto';
-import { createUser, findByEmail, setResetToken } from '../repositories/user.repository';
+import { createUser, findByEmail, setResetToken, findByResetTokenHash, updatePassword } from '../repositories/user.repository';
 import { HttpError } from '../utils/http-error';
 import { sendWelcomeEmail, sendPasswordResetEmail } from './email.service';
 
@@ -9,6 +9,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
 const SALT_ROUNDS = 10;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+const INVALID_RESET_TOKEN = 'Invalid or expired reset token';
 const INVALID_CREDENTIALS = 'Invalid email or password';
 
 function signToken(userId: string) {
@@ -65,4 +66,21 @@ export async function forgotPassword(email: string) {
 
   const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
   void sendPasswordResetEmail(email, `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}`);
+}
+
+export async function resetPassword(token: string, newPassword: string) {
+  if (typeof newPassword !== 'string' || newPassword.length < MIN_PASSWORD_LENGTH) {
+    throw new HttpError(400, 'Password does not meet strength requirements');
+  }
+  if (typeof token !== 'string' || !token) {
+    throw new HttpError(400, INVALID_RESET_TOKEN);
+  }
+
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  const user = await findByResetTokenHash(tokenHash);
+  if (!user) {
+    throw new HttpError(400, INVALID_RESET_TOKEN);
+  }
+
+  await updatePassword(user.id, await bcrypt.hash(newPassword, SALT_ROUNDS));
 }

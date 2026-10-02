@@ -145,6 +145,30 @@ When('the user requests a password reset for {string}', async function (email: s
   this.lastResponse = await request(API_URL).post('/auth/forgot-password').send({ email });
 });
 
+Given('the user has a password reset token for {string}', async function (email: string) {
+  const res = await request(API_URL).post('/test/reset-token').send({ email });
+  expect(res.status).to.equal(200);
+  this.resetToken = res.body.token;
+});
+
+Given('the user has an expired password reset token for {string}', async function (email: string) {
+  const res = await request(API_URL).post('/test/reset-token').send({ email, ttlMs: -1000 });
+  expect(res.status).to.equal(200);
+  this.resetToken = res.body.token;
+});
+
+When('the user resets their password to {string} using the token', async function (password: string) {
+  this.lastResponse = await request(API_URL)
+    .post('/auth/reset-password')
+    .send({ token: this.resetToken, password });
+});
+
+When('the user resets their password to {string} using an unknown token', async function (password: string) {
+  this.lastResponse = await request(API_URL)
+    .post('/auth/reset-password')
+    .send({ token: 'f'.repeat(64), password });
+});
+
 Then('they should see a password reset error message {string}', async function (message: string) {
   expect(this.lastResponse.status).to.equal(400);
   expect(this.lastResponse.body.error).to.equal(message);

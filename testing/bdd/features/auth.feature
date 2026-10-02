@@ -98,6 +98,52 @@ Feature: User Authentication and Profile Management
     When the user requests a password reset for ""
     Then they should see a password reset error message "Invalid email format"
 
+  @api
+  Scenario: Password reset with a valid token lets the user log in with the new password
+    Given a registered user exists with email "cyclist@example.com" and password "SecurePass123"
+    And the user has a password reset token for "cyclist@example.com"
+    When the user resets their password to "NewSecurePass456" using the token
+    Then they should see a message "Password has been reset. Please log in."
+    When the user enters "cyclist@example.com" and "NewSecurePass456" on the login page
+    And clicks the "Login" button
+    Then they should be redirected to the dashboard
+
+  @api
+  Scenario: Old password stops working after a reset
+    Given a registered user exists with email "cyclist@example.com" and password "SecurePass123"
+    And the user has a password reset token for "cyclist@example.com"
+    When the user resets their password to "NewSecurePass456" using the token
+    And the user enters "cyclist@example.com" and "SecurePass123" on the login page
+    And clicks the "Login" button
+    Then they should see an error message "Invalid email or password"
+
+  @api
+  Scenario: A reset token cannot be used twice
+    Given a registered user exists with email "cyclist@example.com" and password "SecurePass123"
+    And the user has a password reset token for "cyclist@example.com"
+    When the user resets their password to "NewSecurePass456" using the token
+    And the user resets their password to "AnotherPass789" using the token
+    Then they should see a password reset error message "Invalid or expired reset token"
+
+  @api
+  Scenario: Password reset fails with an expired token
+    Given a registered user exists with email "cyclist@example.com" and password "SecurePass123"
+    And the user has an expired password reset token for "cyclist@example.com"
+    When the user resets their password to "NewSecurePass456" using the token
+    Then they should see a password reset error message "Invalid or expired reset token"
+
+  @api
+  Scenario: Password reset fails with an unknown token
+    When the user resets their password to "NewSecurePass456" using an unknown token
+    Then they should see a password reset error message "Invalid or expired reset token"
+
+  @api
+  Scenario: Password reset fails with a weak new password
+    Given a registered user exists with email "cyclist@example.com" and password "SecurePass123"
+    And the user has a password reset token for "cyclist@example.com"
+    When the user resets their password to "123" using the token
+    Then they should see a password reset error message "Password does not meet strength requirements"
+
   # --- Section 2: OAuth Integration (Phase 2 - deferred, see SPECIFICATION.md 2.1/2.6) ---
 
   @phase2 @ui
