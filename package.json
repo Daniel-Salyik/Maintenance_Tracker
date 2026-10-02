@@ -7,7 +7,8 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "test": "node --import tsx ./node_modules/.bin/cucumber-js"
+    "test": "node --import tsx ./node_modules/.bin/cucumber-js",
+    "test:ui": "playwright test"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
@@ -16,6 +17,7 @@
   "devDependencies": {
     "@cucumber/cucumber": "^13.2.1",
     "@faker-js/faker": "^10.6.0",
+    "@playwright/test": "^1.63.0",
     "@types/chai": "^5.2.3",
     "@types/node": "^22.20.3",
     "@types/supertest": "^7.2.1",

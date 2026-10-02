@@ -60,8 +60,15 @@ Then('they should see an error message {string}', async function (message) {
   expect(this.lastResponse.body.error).to.equal(message);
 });
 
+Then('they should see a validation message {string}', async function (message) {
+  expect(this.lastResponse.status).to.equal(400);
+  expect(this.lastResponse.body.error).to.equal(message);
+});
+
 Then('they should remain on the login page', async function () {
-  expect(this.lastResponse.status).to.equal(401);
+  // Exact status is asserted by the preceding error/validation message step.
+  expect(this.lastResponse.status).to.be.within(400, 499);
+  expect(this.lastResponse.body).to.not.have.property('token');
 });
 
 Given('a new user provides a valid email {string} and a strong password', async function (email) {
