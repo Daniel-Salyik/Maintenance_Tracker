@@ -46,6 +46,13 @@ export async function login(email: string, password: string) {
   return signToken(user.id);
 }
 
+export async function issueResetToken(userId: string, ttlMs = RESET_TOKEN_TTL_MS) {
+  const token = randomBytes(32).toString('hex');
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  await setResetToken(userId, tokenHash, new Date(Date.now() + ttlMs));
+  return token;
+}
+
 export async function forgotPassword(email: string) {
   if (!EMAIL_RE.test(email)) {
     throw new HttpError(400, 'Invalid email format');
@@ -54,9 +61,7 @@ export async function forgotPassword(email: string) {
   const user = await findByEmail(email);
   if (!user) return; // same outcome as success: do not reveal registered emails
 
-  const token = randomBytes(32).toString('hex');
-  const tokenHash = createHash('sha256').update(token).digest('hex');
-  await setResetToken(user.id, tokenHash, new Date(Date.now() + RESET_TOKEN_TTL_MS));
+  const token = await issueResetToken(user.id);
 
   const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
   void sendPasswordResetEmail(email, `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}`);

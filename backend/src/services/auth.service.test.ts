@@ -32,7 +32,7 @@ vi.mock('jsonwebtoken', () => ({
 }));
 
 import { createHash } from 'crypto';
-import { register, login, forgotPassword } from './auth.service';
+import { register, login, forgotPassword, issueResetToken } from './auth.service';
 
 beforeEach(() => {
   mockCreateUser.mockReset();
@@ -176,5 +176,18 @@ describe('forgotPassword', () => {
   it('rejects an invalid email format with HttpError 400', async () => {
     await expect(forgotPassword('not-an-email')).rejects.toMatchObject({ status: 400, message: 'Invalid email format' });
     expect(mockFindByEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe('issueResetToken', () => {
+  it('returns the raw token and stores only its hash with the given ttl', async () => {
+    const before = Date.now();
+
+    const token = await issueResetToken('u1', -1000);
+
+    const [id, hash, expires] = mockSetResetToken.mock.calls[0];
+    expect(id).toBe('u1');
+    expect(createHash('sha256').update(token).digest('hex')).toBe(hash);
+    expect(expires.getTime()).toBeLessThan(before);
   });
 });
