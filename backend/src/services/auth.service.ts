@@ -1,12 +1,14 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { createUser, findByEmail } from '../repositories/user.repository';
+import { createHash, randomBytes } from 'crypto';
+import { createUser, findByEmail, setResetToken } from '../repositories/user.repository';
 import { HttpError } from '../utils/http-error';
-import { sendWelcomeEmail } from './email.service';
+import { sendWelcomeEmail, sendPasswordResetEmail } from './email.service';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
 const SALT_ROUNDS = 10;
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 const INVALID_CREDENTIALS = 'Invalid email or password';
 
 function signToken(userId: string) {
@@ -42,4 +44,20 @@ export async function login(email: string, password: string) {
   }
 
   return signToken(user.id);
+}
+
+export async function forgotPassword(email: string) {
+  if (!EMAIL_RE.test(email)) {
+    throw new HttpError(400, 'Invalid email format');
+  }
+
+  const user = await findByEmail(email);
+  if (!user) return; // same outcome as success: do not reveal registered emails
+
+  const token = randomBytes(32).toString('hex');
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  await setResetToken(user.id, tokenHash, new Date(Date.now() + RESET_TOKEN_TTL_MS));
+
+  const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+  void sendPasswordResetEmail(email, `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}`);
 }

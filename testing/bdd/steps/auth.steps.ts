@@ -141,6 +141,15 @@ Then('no new account should be created in the database', async function () {
   expect(res.status).to.equal(alreadyExisted ? 200 : 404);
 });
 
+When('the user requests a password reset for {string}', async function (email: string) {
+  this.lastResponse = await request(API_URL).post('/auth/forgot-password').send({ email });
+});
+
+Then('they should see a password reset error message {string}', async function (message: string) {
+  expect(this.lastResponse.status).to.equal(400);
+  expect(this.lastResponse.body.error).to.equal(message);
+});
+
 // --- Section 2: OAuth Integration (@phase2 - excluded from default run, see SPECIFICATION.md 2.1/2.6) ---
 
 Given('a user has a valid Strava account', async function () {

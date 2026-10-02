@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { register, login } from '../services/auth.service';
+import { register, login, forgotPassword } from '../services/auth.service';
 import { findByEmail } from '../repositories/user.repository';
 
 export async function registerHandler(req: Request, res: Response) {
@@ -10,6 +10,11 @@ export async function registerHandler(req: Request, res: Response) {
 export async function loginHandler(req: Request, res: Response) {
   const token = await login(req.body.email, req.body.password);
   res.status(200).json({ token });
+}
+
+export async function forgotPasswordHandler(req: Request, res: Response) {
+  await forgotPassword(req.body.email);
+  res.status(200).json({ message: 'If that email is registered, a reset link has been sent.' });
 }
 
 export async function verifyEmailHandler(req: Request, res: Response) {

@@ -76,6 +76,28 @@ Feature: User Authentication and Profile Management
     Then they should see a validation message "Email and password are required"
     And they should remain on the login page
 
+  @api
+  Scenario: Password reset request for a registered email
+    Given a registered user exists with email "cyclist@example.com" and password "SecurePass123"
+    When the user requests a password reset for "cyclist@example.com"
+    Then they should see a message "If that email is registered, a reset link has been sent."
+
+  @api
+  Scenario: Password reset request for an unknown email gives the same answer
+    Given no registered user exists with email "ghost@example.com"
+    When the user requests a password reset for "ghost@example.com"
+    Then they should see a message "If that email is registered, a reset link has been sent."
+
+  @api
+  Scenario: Password reset request fails with an invalid email format
+    When the user requests a password reset for "not-an-email"
+    Then they should see a password reset error message "Invalid email format"
+
+  @api
+  Scenario: Password reset request fails when the email is missing
+    When the user requests a password reset for ""
+    Then they should see a password reset error message "Invalid email format"
+
   # --- Section 2: OAuth Integration (Phase 2 - deferred, see SPECIFICATION.md 2.1/2.6) ---
 
   @phase2 @ui
