@@ -44,3 +44,25 @@ export async function updatePreferences(id: string, fields: Record<string, strin
   );
   return rows[0];
 }
+
+export async function setResetToken(id: string, tokenHash: string, expires: Date) {
+  await pool.query(
+    'UPDATE users SET reset_token_hash = $1, reset_token_expires = $2 WHERE id = $3',
+    [tokenHash, expires, id]
+  );
+}
+
+export async function findByResetTokenHash(tokenHash: string) {
+  const { rows } = await pool.query(
+    'SELECT * FROM users WHERE reset_token_hash = $1 AND reset_token_expires > NOW()',
+    [tokenHash]
+  );
+  return rows[0] ?? null;
+}
+
+export async function updatePassword(id: string, passwordHash: string) {
+  await pool.query(
+    'UPDATE users SET password_hash = $1, reset_token_hash = NULL, reset_token_expires = NULL WHERE id = $2',
+    [passwordHash, id]
+  );
+}

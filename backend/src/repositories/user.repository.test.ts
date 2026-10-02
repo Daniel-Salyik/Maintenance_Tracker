@@ -6,7 +6,15 @@ vi.mock('../config/db', () => ({
   pool: { query: mockQuery },
 }));
 
-import { createUser, findByEmail, findById, updatePreferences } from './user.repository';
+import {
+  createUser,
+  findByEmail,
+  findById,
+  updatePreferences,
+  setResetToken,
+  findByResetTokenHash,
+  updatePassword,
+} from './user.repository';
 
 beforeEach(() => {
   mockQuery.mockReset();
@@ -122,5 +130,53 @@ describe('updatePreferences', () => {
     ).rejects.toThrow();
 
     expect(mockQuery).not.toHaveBeenCalled();
+  });
+});
+
+describe('setResetToken', () => {
+  it('stores the token hash and expiry for the user', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+    const expires = new Date('2030-01-01T00:00:00Z');
+
+    await setResetToken('1', 'hash', expires);
+
+    const [sql, params] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/UPDATE users SET reset_token_hash/i);
+    expect(params).toEqual(['hash', expires, '1']);
+  });
+});
+
+describe('findByResetTokenHash', () => {
+  it('returns the user whose unexpired token matches', async () => {
+    const row = { id: '1', email: 'a@b.com' };
+    mockQuery.mockResolvedValueOnce({ rows: [row] });
+
+    const result = await findByResetTokenHash('hash');
+
+    const [sql, params] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/reset_token_hash = \$1/);
+    expect(sql).toMatch(/reset_token_expires > NOW\(\)/i);
+    expect(params).toEqual(['hash']);
+    expect(result).toEqual(row);
+  });
+
+  it('returns null when no match or expired', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    expect(await findByResetTokenHash('nope')).toBeNull();
+  });
+});
+
+describe('updatePassword', () => {
+  it('sets the new hash and clears the reset token', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    await updatePassword('1', 'new-hash');
+
+    const [sql, params] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/SET password_hash = \$1/i);
+    expect(sql).toMatch(/reset_token_hash = NULL/i);
+    expect(sql).toMatch(/reset_token_expires = NULL/i);
+    expect(params).toEqual(['new-hash', '1']);
   });
 });
