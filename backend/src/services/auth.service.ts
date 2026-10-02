@@ -25,6 +25,10 @@ export async function register(email: string, password: string) {
 }
 
 export async function login(email: string, password: string) {
+  if (!email || !password) {
+    throw new HttpError(400, 'Email and password are required');
+  }
+
   const user = await findByEmail(email);
   if (!user) {
     throw new HttpError(401, INVALID_CREDENTIALS);
