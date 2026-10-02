@@ -7,6 +7,10 @@ import { bikeRoutes } from './routes/bike.routes';
 import { testRoutes } from './routes/test.routes';
 import { errorMiddleware } from './middleware/error.middleware';
 
+if (!process.env.RESEND_API && process.env.NODE_ENV !== 'test') {
+  console.warn('RESEND_API is not set: emails will not be sent');
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
