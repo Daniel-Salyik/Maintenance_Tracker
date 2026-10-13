@@ -22,7 +22,7 @@ app.use('/user', userRoutes);
 app.use('/users', usersRoutes);
 app.use('/bikes', bikeRoutes);
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV === 'test') {
   app.use('/test', testRoutes);
 }
 

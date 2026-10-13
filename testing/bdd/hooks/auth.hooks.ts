@@ -5,13 +5,11 @@ import 'dotenv/config';
 const API_URL = process.env.API_URL || 'http://localhost:3000';
 
 Before(async function () {
-  // Reset DB state before each scenario
-  // Since we don't have a reset endpoint yet, this is a placeholder
-  // In TDD Green, we will implement a /test/reset endpoint or direct DB truncate
-  try {
-    await request(API_URL).post('/test/reset');
-  } catch (e) {
-    // Ignore if not implemented yet
+  const res = await request(API_URL).post('/test/reset');
+  if (res.status !== 200) {
+    throw new Error(
+      `/test/reset failed (${res.status}): ${JSON.stringify(res.body)}. Start the backend with "npm run dev:test".`,
+    );
   }
 });
 
