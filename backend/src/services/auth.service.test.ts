@@ -1,17 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { HttpError } from '../utils/http-error';
 
-const { mockCreateUser, mockFindByEmail, mockBcryptHash, mockBcryptCompare, mockJwtSign } = vi.hoisted(() => ({
-  mockCreateUser: vi.fn(),
-  mockFindByEmail: vi.fn(),
-  mockBcryptHash: vi.fn(),
-  mockBcryptCompare: vi.fn(),
-  mockJwtSign: vi.fn(),
-}));
+const { mockCreateUser, mockFindByEmail, mockBcryptHash, mockBcryptCompare, mockJwtSign, mockSendWelcomeEmail } =
+  vi.hoisted(() => ({
+    mockCreateUser: vi.fn(),
+    mockFindByEmail: vi.fn(),
+    mockBcryptHash: vi.fn(),
+    mockBcryptCompare: vi.fn(),
+    mockJwtSign: vi.fn(),
+    mockSendWelcomeEmail: vi.fn(),
+  }));
 
 vi.mock('../repositories/user.repository', () => ({
   createUser: mockCreateUser,
   findByEmail: mockFindByEmail,
+}));
+
+vi.mock('./mail.service', () => ({
+  sendWelcomeEmail: mockSendWelcomeEmail,
 }));
 
 vi.mock('bcrypt', () => ({
@@ -30,6 +36,8 @@ beforeEach(() => {
   mockBcryptHash.mockReset();
   mockBcryptCompare.mockReset();
   mockJwtSign.mockReset();
+  mockSendWelcomeEmail.mockReset();
+  mockSendWelcomeEmail.mockResolvedValue(undefined);
 });
 
 describe('register', () => {
@@ -67,6 +75,36 @@ describe('register', () => {
     mockCreateUser.mockRejectedValueOnce(conflict);
 
     await expect(register('a@b.com', 'SecurePassword123!')).rejects.toBe(conflict);
+    expect(mockSendWelcomeEmail).not.toHaveBeenCalled();
+  });
+
+  it('sends a welcome email after the user is created', async () => {
+    mockBcryptHash.mockResolvedValueOnce('hashed-pw');
+    mockCreateUser.mockResolvedValueOnce({ id: '1', email: 'a@b.com' });
+
+    await register('a@b.com', 'SecurePassword123!');
+
+    expect(mockSendWelcomeEmail).toHaveBeenCalledTimes(1);
+    expect(mockSendWelcomeEmail).toHaveBeenCalledWith('a@b.com');
+  });
+
+  it('still resolves when the welcome email fails (fire-and-forget)', async () => {
+    mockBcryptHash.mockResolvedValueOnce('hashed-pw');
+    mockCreateUser.mockResolvedValueOnce({ id: '1', email: 'a@b.com' });
+    mockSendWelcomeEmail.mockRejectedValueOnce(new Error('smtp down'));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(register('a@b.com', 'SecurePassword123!')).resolves.toBeUndefined();
+    await Promise.resolve();
+
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it('does not send an email when validation fails', async () => {
+    await expect(register('not-an-email', 'SecurePassword123!')).rejects.toMatchObject({ status: 400 });
+
+    expect(mockSendWelcomeEmail).not.toHaveBeenCalled();
   });
 });
 
