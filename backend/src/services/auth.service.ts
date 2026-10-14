@@ -1,13 +1,16 @@
 import bcrypt from 'bcrypt';
+import { createHash, randomBytes } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { createUser, findByEmail } from '../repositories/user.repository';
+import { createResetToken } from '../repositories/password-reset.repository';
 import { HttpError } from '../utils/http-error';
-import { sendWelcomeEmail } from './mail.service';
+import { sendPasswordResetEmail, sendWelcomeEmail } from './mail.service';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
 const SALT_ROUNDS = 10;
 const INVALID_CREDENTIALS = 'Invalid email or password';
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 function signToken(userId: string) {
   return jwt.sign({ sub: userId }, process.env.JWT_SECRET as string, { expiresIn: '1d' });
@@ -44,4 +47,25 @@ export async function login(email: string, password: string) {
   }
 
   return signToken(user.id);
+}
+
+export async function forgotPassword(email: string) {
+  if (typeof email !== 'string' || !email) {
+    throw new HttpError(400, 'Email is required');
+  }
+
+  // Unknown email resolves silently so the endpoint never reveals which accounts exist.
+  const user = await findByEmail(email);
+  if (!user) {
+    return;
+  }
+
+  const token = randomBytes(32).toString('hex');
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  await createResetToken(user.id, tokenHash, new Date(Date.now() + RESET_TOKEN_TTL_MS));
+
+  const baseUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+  sendPasswordResetEmail(user.email, `${baseUrl}/reset-password?token=${token}`).catch((err) =>
+    console.error('password reset email failed', err)
+  );
 }

@@ -13,7 +13,7 @@ beforeEach(() => {
 });
 
 describe('createResetToken', () => {
-  it('inserts the user id, token hash and expiry', async () => {
+  it('replaces older tokens: deletes the user\'s existing ones and inserts the new one in a single statement', async () => {
     const expiresAt = new Date('2026-10-14T12:00:00Z');
     mockQuery.mockResolvedValueOnce({ rows: [] });
 
@@ -21,6 +21,7 @@ describe('createResetToken', () => {
 
     expect(mockQuery).toHaveBeenCalledTimes(1);
     const [sql, params] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/DELETE FROM password_reset_tokens/i);
     expect(sql).toMatch(/INSERT INTO password_reset_tokens/i);
     expect(params).toEqual(['user-1', 'hashed-token', expiresAt]);
   });

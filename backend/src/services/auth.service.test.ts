@@ -1,23 +1,38 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { HttpError } from '../utils/http-error';
 
-const { mockCreateUser, mockFindByEmail, mockBcryptHash, mockBcryptCompare, mockJwtSign, mockSendWelcomeEmail } =
-  vi.hoisted(() => ({
-    mockCreateUser: vi.fn(),
-    mockFindByEmail: vi.fn(),
-    mockBcryptHash: vi.fn(),
-    mockBcryptCompare: vi.fn(),
-    mockJwtSign: vi.fn(),
-    mockSendWelcomeEmail: vi.fn(),
-  }));
+const {
+  mockCreateUser,
+  mockFindByEmail,
+  mockBcryptHash,
+  mockBcryptCompare,
+  mockJwtSign,
+  mockSendWelcomeEmail,
+  mockSendPasswordResetEmail,
+  mockCreateResetToken,
+} = vi.hoisted(() => ({
+  mockCreateUser: vi.fn(),
+  mockFindByEmail: vi.fn(),
+  mockBcryptHash: vi.fn(),
+  mockBcryptCompare: vi.fn(),
+  mockJwtSign: vi.fn(),
+  mockSendWelcomeEmail: vi.fn(),
+  mockSendPasswordResetEmail: vi.fn(),
+  mockCreateResetToken: vi.fn(),
+}));
 
 vi.mock('../repositories/user.repository', () => ({
   createUser: mockCreateUser,
   findByEmail: mockFindByEmail,
 }));
 
+vi.mock('../repositories/password-reset.repository', () => ({
+  createResetToken: mockCreateResetToken,
+}));
+
 vi.mock('./mail.service', () => ({
   sendWelcomeEmail: mockSendWelcomeEmail,
+  sendPasswordResetEmail: mockSendPasswordResetEmail,
 }));
 
 vi.mock('bcrypt', () => ({
@@ -28,7 +43,7 @@ vi.mock('jsonwebtoken', () => ({
   default: { sign: mockJwtSign },
 }));
 
-import { register, login } from './auth.service';
+import { register, login, forgotPassword } from './auth.service';
 
 beforeEach(() => {
   mockCreateUser.mockReset();
@@ -38,6 +53,10 @@ beforeEach(() => {
   mockJwtSign.mockReset();
   mockSendWelcomeEmail.mockReset();
   mockSendWelcomeEmail.mockResolvedValue(undefined);
+  mockSendPasswordResetEmail.mockReset();
+  mockSendPasswordResetEmail.mockResolvedValue(undefined);
+  mockCreateResetToken.mockReset();
+  mockCreateResetToken.mockResolvedValue(undefined);
 });
 
 describe('register', () => {
@@ -95,9 +114,8 @@ describe('register', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await expect(register('a@b.com', 'SecurePassword123!')).resolves.toBeUndefined();
-    await Promise.resolve();
 
-    expect(errorSpy).toHaveBeenCalled();
+    await vi.waitFor(() => expect(errorSpy).toHaveBeenCalled());
     errorSpy.mockRestore();
   });
 
@@ -137,5 +155,83 @@ describe('login', () => {
       message: 'Invalid email or password',
     });
     expect(mockBcryptCompare).not.toHaveBeenCalled();
+  });
+});
+
+describe('forgotPassword', () => {
+  const user = { id: 'user-1', email: 'a@b.com' };
+
+  it('stores only the sha256 hash of the token, expiring in about one hour', async () => {
+    mockFindByEmail.mockResolvedValueOnce(user);
+    const before = Date.now();
+
+    await forgotPassword('a@b.com');
+
+    expect(mockCreateResetToken).toHaveBeenCalledTimes(1);
+    const [userId, tokenHash, expiresAt] = mockCreateResetToken.mock.calls[0];
+    expect(userId).toBe('user-1');
+    expect(tokenHash).toMatch(/^[0-9a-f]{64}$/);
+    const ttl = (expiresAt as Date).getTime() - before;
+    expect(ttl).toBeGreaterThan(59 * 60 * 1000);
+    expect(ttl).toBeLessThanOrEqual(60 * 60 * 1000 + 1000);
+  });
+
+  it('emails a reset link that carries the raw token, never the stored hash', async () => {
+    mockFindByEmail.mockResolvedValueOnce(user);
+
+    await forgotPassword('a@b.com');
+
+    expect(mockSendPasswordResetEmail).toHaveBeenCalledTimes(1);
+    const [to, link] = mockSendPasswordResetEmail.mock.calls[0];
+    const tokenHash = mockCreateResetToken.mock.calls[0][1];
+    expect(to).toBe('a@b.com');
+    expect(link).toMatch(/\/reset-password\?token=[0-9a-f]{64}$/);
+    expect(link).not.toContain(tokenHash);
+  });
+
+  it('sends the email to the stored address, not the typed string', async () => {
+    mockFindByEmail.mockResolvedValueOnce({ id: 'user-1', email: 'stored@b.com' });
+
+    await forgotPassword('typed@b.com');
+
+    expect(mockSendPasswordResetEmail.mock.calls[0][0]).toBe('stored@b.com');
+  });
+
+  it('does nothing and resolves for an unknown email (no user enumeration)', async () => {
+    mockFindByEmail.mockResolvedValueOnce(null);
+
+    await expect(forgotPassword('ghost@b.com')).resolves.toBeUndefined();
+
+    expect(mockCreateResetToken).not.toHaveBeenCalled();
+    expect(mockSendPasswordResetEmail).not.toHaveBeenCalled();
+  });
+
+  it('rejects an empty email with HttpError 400 "Email is required"', async () => {
+    await expect(forgotPassword('')).rejects.toMatchObject({ status: 400, message: 'Email is required' });
+
+    expect(mockFindByEmail).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, null, 123, { a: 1 }, ['a@b.com']])(
+    'rejects a non-string email (%j) with HttpError 400 before any lookup',
+    async (bad) => {
+      await expect(forgotPassword(bad as unknown as string)).rejects.toMatchObject({
+        status: 400,
+        message: 'Email is required',
+      });
+
+      expect(mockFindByEmail).not.toHaveBeenCalled();
+    }
+  );
+
+  it('still resolves when the reset email fails (fire-and-forget)', async () => {
+    mockFindByEmail.mockResolvedValueOnce(user);
+    mockSendPasswordResetEmail.mockRejectedValueOnce(new Error('smtp down'));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(forgotPassword('a@b.com')).resolves.toBeUndefined();
+
+    await vi.waitFor(() => expect(errorSpy).toHaveBeenCalled());
+    errorSpy.mockRestore();
   });
 });
