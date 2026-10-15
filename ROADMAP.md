@@ -56,6 +56,14 @@ This file tracks the atomic progression of the backend development. Each task co
 | Waiting | **#15: Performance Baseline** | `infra/performance` | Arch | Load-test financial/cost report endpoints on realistic log volume. |
 | Waiting | **#16: Deployment Strategy** | `infra/deploy` | Arch | TBD — hosting and CI/CD deployment pipeline decision. |
 | Waiting | **#17: Strava OAuth Integration** | `feat/strava-oauth` | TBD | Deferred: OAuth integration with Strava to auto-sync mileage/activity data (per SPECIFICATION.md/README.md future scope). |
+| Done | **#18: Transactional Email Service** | `feat/backend-email-service` | Shift-Left | Nodemailer mail service with Mailpit locally. Welcome email on register and password-reset request email. |
+| Done | **#18.1: Mail Transport & Mailpit** | `feat/backend-email-service` | Infra | `config/mail.ts` (env-driven SMTP), Mailpit in `docker-compose.yml`, `.env.example` vars. |
+| Done | **#18.2: Welcome Email** | `feat/backend-email-service` | TDD Green | `mail.service.ts` sends a welcome email on registration (fire-and-forget). |
+| Done | **#18.3: Forgot-Password Request** | `feat/backend-email-service` | TDD Green | Migration 006, `password-reset.repository.ts`, `POST /auth/forgot-password`, hashed 1h single-use token, reset email, anti-enumeration. |
+| Done | **#18.4: Email BDD** | `feat/backend-email-service` | TDD Red | `email.feature` (8 scenarios, `@email`), `email.steps.ts`, Mailpit inbox-clearing hook. |
+| Waiting | **#18.5: Reset-Password Endpoint** | `feat/reset-password` | Shift-Left | `POST /auth/reset-password`: validate token hash and expiry, update the password, consume the token. Includes BDD. |
+| Waiting | **#18.6: Forgot-Password Rate Limiting** | `feat/email-rate-limit` | Infra | Throttle forgot-password to limit mail abuse. Also covers the timing and enumeration leak. |
+| Waiting | **#18.7: Production SMTP Provider** | `infra/smtp-provider` | Infra | Pick a provider and set `SMTP_*` and `MAIL_FROM` by env only. |
 
 ## 📐 Development Workflow (Shift-Left)
 For every feature (`feat/` branches), we follow this strict sequence:
