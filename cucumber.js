@@ -1,7 +1,11 @@
 module.exports = {
   default: {
     require: ['testing/bdd/steps/*.steps.ts', 'testing/bdd/hooks/**/*.ts'],
-    paths: ['testing/bdd/features/auth.feature', 'testing/bdd/features/bikes.feature'],
+    paths: [
+      'testing/bdd/features/auth.feature',
+      'testing/bdd/features/bikes.feature',
+      'testing/bdd/features/email.feature'
+    ],
     tags: 'not @phase2',
     format: ['pretty']
   }
