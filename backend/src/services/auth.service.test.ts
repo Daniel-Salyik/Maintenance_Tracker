@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { HttpError } from '../utils/http-error';
 
 const {
@@ -119,6 +119,34 @@ describe('register', () => {
     errorSpy.mockRestore();
   });
 
+  it.each([undefined, null, 123, { a: 1 }, ['a@b.com']])(
+    'rejects a non-string email (%j) with HttpError 400 "Invalid email format"',
+    async (bad) => {
+      await expect(register(bad as unknown as string, 'SecurePassword123!')).rejects.toMatchObject({
+        status: 400,
+        message: 'Invalid email format',
+      });
+
+      expect(mockBcryptHash).not.toHaveBeenCalled();
+      expect(mockCreateUser).not.toHaveBeenCalled();
+      expect(mockSendWelcomeEmail).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([undefined, null, 12345678, { a: 1 }, ['SecurePassword123!']])(
+    'rejects a non-string password (%j) with HttpError 400, never touches the repository',
+    async (bad) => {
+      await expect(register('a@b.com', bad as unknown as string)).rejects.toMatchObject({
+        status: 400,
+        message: 'Password does not meet strength requirements',
+      });
+
+      expect(mockBcryptHash).not.toHaveBeenCalled();
+      expect(mockCreateUser).not.toHaveBeenCalled();
+      expect(mockSendWelcomeEmail).not.toHaveBeenCalled();
+    }
+  );
+
   it('does not send an email when validation fails', async () => {
     await expect(register('not-an-email', 'SecurePassword123!')).rejects.toMatchObject({ status: 400 });
 
@@ -233,5 +261,67 @@ describe('forgotPassword', () => {
 
     await vi.waitFor(() => expect(errorSpy).toHaveBeenCalled());
     errorSpy.mockRestore();
+  });
+});
+
+describe('forgotPassword reset link and ordering', () => {
+  const user = { id: 'user-1', email: 'a@b.com' };
+
+  afterEach(() => { 
+    vi.unstubAllEnvs();
+  });
+
+  it('saves the token before it sends the email', async () => {
+    mockFindByEmail.mockResolvedValueOnce(user);
+
+    await forgotPassword('a@b.com');
+
+    const saved = mockCreateResetToken.mock.invocationCallOrder[0];
+    const sent = mockSendPasswordResetEmail.mock.invocationCallOrder[0];
+    expect(saved).toBeLessThan(sent);
+  });
+
+  it('sends no email and rejects when the token cannot be saved', async () => {
+    const dbError = new Error('connection lost');
+    mockFindByEmail.mockResolvedValueOnce(user);
+    mockCreateResetToken.mockRejectedValueOnce(dbError);
+
+    await expect(forgotPassword('a@b.com')).rejects.toBe(dbError);
+
+    expect(mockSendPasswordResetEmail).not.toHaveBeenCalled();
+  });
+
+  it('creates a different token on every request', async () => {
+    mockFindByEmail.mockResolvedValue(user);
+
+    await forgotPassword('a@b.com');
+    await forgotPassword('a@b.com');
+
+    const [, first] = mockSendPasswordResetEmail.mock.calls[0];
+    const [, second] = mockSendPasswordResetEmail.mock.calls[1];
+    expect(first).not.toBe(second);
+    expect(mockCreateResetToken.mock.calls[0][1]).not.toBe(mockCreateResetToken.mock.calls[1][1]);
+  });
+
+  it('builds the link from FRONTEND_URL', async () => {
+    vi.stubEnv('FRONTEND_URL', 'https://app.example.com');
+    mockFindByEmail.mockResolvedValueOnce(user);
+
+    await forgotPassword('a@b.com');
+
+    expect(mockSendPasswordResetEmail.mock.calls[0][1]).toMatch(
+      /^https:\/\/app\.example\.com\/reset-password\?token=[0-9a-f]{64}$/
+    );
+  });
+
+  it('falls back to the local frontend URL when FRONTEND_URL is not set', async () => {
+    vi.stubEnv('FRONTEND_URL', undefined);
+    mockFindByEmail.mockResolvedValueOnce(user);
+
+    await forgotPassword('a@b.com');
+
+    expect(mockSendPasswordResetEmail.mock.calls[0][1]).toMatch(
+      /^http:\/\/localhost:5173\/reset-password\?token=[0-9a-f]{64}$/
+    );
   });
 });

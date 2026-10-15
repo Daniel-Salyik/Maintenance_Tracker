@@ -17,10 +17,10 @@ function signToken(userId: string) {
 }
 
 export async function register(email: string, password: string) {
-  if (!EMAIL_RE.test(email)) {
+  if (typeof email !== 'string' || !EMAIL_RE.test(email)) {
     throw new HttpError(400, 'Invalid email format');
   }
-  if (password.length < MIN_PASSWORD_LENGTH) {
+  if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
     throw new HttpError(400, 'Password does not meet strength requirements');
   }
 

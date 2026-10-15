@@ -49,4 +49,11 @@ describe('sendPasswordResetEmail', () => {
     expect(message.subject).toMatch(/reset/i);
     expect(message.text).toContain('http://localhost:5173/reset?token=abc');
   });
+
+  it('propagates a transport failure to the caller', async () => {
+    const failure = new Error('smtp down');
+    mockSendMail.mockRejectedValueOnce(failure);
+
+    await expect(sendPasswordResetEmail('a@b.com', 'http://localhost:5173/reset?token=abc')).rejects.toBe(failure);
+  });
 });
