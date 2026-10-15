@@ -3,12 +3,12 @@ import { register, login, forgotPassword } from '../services/auth.service';
 import { findByEmail } from '../repositories/user.repository';
 
 export async function registerHandler(req: Request, res: Response) {
-  await register(req.body.email, req.body.password);
+  await register(req.body?.email, req.body?.password);
   res.status(201).json({ message: 'Registration successful. Please log in.' });
 }
 
 export async function loginHandler(req: Request, res: Response) {
-  const token = await login(req.body.email, req.body.password);
+  const token = await login(req.body?.email, req.body?.password);
   res.status(200).json({ token });
 }
 
