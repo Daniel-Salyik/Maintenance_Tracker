@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest run",
+    "test:report": "vitest run --coverage --reporter=default --reporter=junit --outputFile.junit=test-reports/junit.xml",
     "migrate": "tsx scripts/migrate.ts",
     "dev": "tsx watch src/index.ts",
     "dev:test": "NODE_ENV=test tsx watch src/index.ts",
@@ -33,6 +34,7 @@
     "@types/node": "^26.5.0",
     "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
+    "@vitest/coverage-v8": "^5.0.5",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
     "tsx": "^4.23.13",
