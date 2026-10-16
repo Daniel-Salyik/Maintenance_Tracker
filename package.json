@@ -8,7 +8,8 @@
   "main": "index.js",
   "scripts": {
     "test": "node --import tsx ./node_modules/.bin/cucumber-js",
-    "test:ui": "playwright test"
+    "test:ui": "playwright test",
+    "test:report": "node --import tsx ./node_modules/.bin/cucumber-js --format pretty --format html:test-reports/cucumber.html --format json:test-reports/cucumber.json"
   },
   "dependencies": {
     "dotenv": "^17.4.2",

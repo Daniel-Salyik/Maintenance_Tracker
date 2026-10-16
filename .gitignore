@@ -25,6 +25,9 @@ logs/
 
 # Testing
 test-results/
+coverage/
+test-reports/
+cucumber-report.*
 playwright-report/
 blob-report/
 playwright/.cache
