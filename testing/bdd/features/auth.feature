@@ -55,6 +55,20 @@ Feature: User Authentication and Profile Management
     And no new account should be created in the database
 
   @api @ui
+  Scenario: Registration fails with an empty email
+    Given a new user provides an invalid email "" and a strong password
+    When they submit the registration form
+    Then they should see a registration error message "Invalid email format"
+    And no new account should be created in the database
+
+  @api @ui
+  Scenario: Registration fails with an empty password
+    Given a new user provides a valid email "nopass@example.com" and a weak password ""
+    When they submit the registration form
+    Then they should see a registration error message "Password does not meet strength requirements"
+    And no new account should be created in the database
+
+  @api @ui
   Scenario: Login fails with a non-existent email
     Given no registered user exists with email "ghost@example.com"
     When the user enters "ghost@example.com" and "AnyPassword123" on the login page
