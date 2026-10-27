@@ -26,6 +26,14 @@ export async function findById(id: string) {
   return rows[0] ?? null;
 }
 
+export async function updatePassword(id: string, passwordHash: string) {
+  const { rows } = await pool.query(
+    'UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING id',
+    [passwordHash, id]
+  );
+  return rows[0] ?? null;
+}
+
 const UPDATABLE_COLUMNS = ['distance_unit', 'currency'];
 
 export async function updatePreferences(id: string, fields: Record<string, string>) {

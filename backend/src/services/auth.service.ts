@@ -1,8 +1,8 @@
 import bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'node:crypto';
 import jwt from 'jsonwebtoken';
-import { createUser, findByEmail } from '../repositories/user.repository';
-import { createResetToken } from '../repositories/password-reset.repository';
+import { createUser, findByEmail, findById, updatePassword } from '../repositories/user.repository';
+import { createResetToken, findResetToken, deleteResetToken } from '../repositories/password-reset.repository';
 import { HttpError } from '../utils/http-error';
 import { sendPasswordResetEmail, sendWelcomeEmail } from './mail.service';
 
@@ -68,4 +68,28 @@ export async function forgotPassword(email: string) {
   sendPasswordResetEmail(user.email, `${baseUrl}/reset-password?token=${token}`).catch((err) =>
     console.error('password reset email failed', err)
   );
+}
+
+export async function resetPassword(token: string, password: string) {
+  if (typeof token !== 'string' || !token) {
+    throw new HttpError(400, 'Reset token is required');
+  }
+  if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+    throw new HttpError(400, 'Password does not meet strength requirements');
+  }
+
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  const resetToken = await findResetToken(tokenHash);
+  if (!resetToken || new Date(resetToken.expires_at) <= new Date()) {
+    throw new HttpError(400, 'Invalid or expired reset token');
+  }
+
+  const user = await findById(resetToken.user_id);
+  if (!user) {
+    throw new HttpError(400, 'Invalid or expired reset token');
+  }
+
+  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+  await updatePassword(user.id, passwordHash);
+  await deleteResetToken(tokenHash);
 }
