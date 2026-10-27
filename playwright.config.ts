@@ -6,6 +6,8 @@ const API_URL = process.env.API_URL || 'http://localhost:3000';
 
 export default defineConfig({
   testDir: 'testing/e2e',
+  fullyParallel: false,
+  workers: 1,
   use: {
     baseURL: UI_URL,
     trace: 'retain-on-failure',
