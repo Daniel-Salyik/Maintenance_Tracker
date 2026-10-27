@@ -25,5 +25,13 @@ export async function deleteResetToken(tokenHash: string) {
   await pool.query('DELETE FROM password_reset_tokens WHERE token_hash = $1', [tokenHash]);
 }
 
+export async function deleteResetTokensByUserId(userId: string) {
+  await pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [userId]);
+}
+
+export async function deleteExpiredResetTokens() {
+  await pool.query('DELETE FROM password_reset_tokens WHERE expires_at <= NOW()');
+}
+
 export const deleteResetTokenByHash = deleteResetToken;
 export const consumeResetToken = deleteResetToken;

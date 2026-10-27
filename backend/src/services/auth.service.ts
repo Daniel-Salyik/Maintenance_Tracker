@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { createUser, findByEmail, findById, updatePassword } from '../repositories/user.repository';
-import { createResetToken, findResetToken, deleteResetToken } from '../repositories/password-reset.repository';
+import { createResetToken, findResetToken, deleteResetToken, deleteResetTokensByUserId, deleteExpiredResetTokens } from '../repositories/password-reset.repository';
 import { HttpError } from '../utils/http-error';
 import { sendPasswordResetEmail, sendWelcomeEmail } from './mail.service';
 
@@ -79,6 +79,8 @@ export async function resetPassword(token: string, password: string) {
   }
 
   const tokenHash = createHash('sha256').update(token).digest('hex');
+  await deleteExpiredResetTokens().catch(() => undefined);
+
   const resetToken = await findResetToken(tokenHash);
   if (!resetToken || new Date(resetToken.expires_at) <= new Date()) {
     throw new HttpError(400, 'Invalid or expired reset token');
@@ -86,10 +88,17 @@ export async function resetPassword(token: string, password: string) {
 
   const user = await findById(resetToken.user_id);
   if (!user) {
+    await deleteResetToken(tokenHash);
     throw new HttpError(400, 'Invalid or expired reset token');
   }
 
+  // Consume the token before mutating the password so a racing duplicate
+  // request cannot reuse the same link.
+  await deleteResetToken(tokenHash);
+
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
   await updatePassword(user.id, passwordHash);
-  await deleteResetToken(tokenHash);
+
+  // Clear any remaining reset tokens for this account.
+  await deleteResetTokensByUserId(user.id);
 }
