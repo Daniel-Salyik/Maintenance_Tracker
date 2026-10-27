@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { register, login, forgotPassword, resetPassword } from '../services/auth.service';
+import { register, login, forgotPassword, resetPassword, validateResetToken } from '../services/auth.service';
 import { findByEmail } from '../repositories/user.repository';
 
 export async function registerHandler(req: Request, res: Response) {
@@ -20,6 +20,11 @@ export async function forgotPasswordHandler(req: Request, res: Response) {
 export async function resetPasswordHandler(req: Request, res: Response) {
   await resetPassword(req.body?.token, req.body?.password);
   res.status(200).json({ message: 'Password reset successful. Please log in.' });
+}
+
+export async function validateResetTokenHandler(req: Request, res: Response) {
+  await validateResetToken(req.params.token as string);
+  res.status(200).json({ message: 'Reset token is valid.' });
 }
 
 export async function verifyEmailHandler(req: Request, res: Response) {

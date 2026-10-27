@@ -11,7 +11,7 @@ export async function createResetToken(userId: string, tokenHash: string, expire
 
 export async function findResetToken(tokenHash: string) {
   const { rows } = await pool.query(
-    'SELECT id, user_id, token_hash, expires_at FROM password_reset_tokens WHERE token_hash = $1',
+    'SELECT id, user_id, token_hash, expires_at FROM password_reset_tokens WHERE token_hash = $1 AND expires_at > NOW()',
     [tokenHash]
   );
   return rows[0] ?? null;

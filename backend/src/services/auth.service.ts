@@ -92,13 +92,25 @@ export async function resetPassword(token: string, password: string) {
     throw new HttpError(400, 'Invalid or expired reset token');
   }
 
-  // Consume the token before mutating the password so a racing duplicate
-  // request cannot reuse the same link.
-  await deleteResetToken(tokenHash);
-
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
   await updatePassword(user.id, passwordHash);
 
+  // Consume the token only after the password has been updated so a failed
+  // update does not invalidate the user's reset link.
+  await deleteResetToken(tokenHash);
+
   // Clear any remaining reset tokens for this account.
   await deleteResetTokensByUserId(user.id);
+}
+
+export async function validateResetToken(token: string) {
+  if (typeof token !== 'string' || !token) {
+    throw new HttpError(400, 'Invalid or expired reset token');
+  }
+
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  const resetToken = await findResetToken(tokenHash);
+  if (!resetToken || new Date(resetToken.expires_at) <= new Date()) {
+    throw new HttpError(400, 'Invalid or expired reset token');
+  }
 }

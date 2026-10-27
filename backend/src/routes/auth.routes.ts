@@ -4,6 +4,7 @@ import {
   loginHandler,
   forgotPasswordHandler,
   resetPasswordHandler,
+  validateResetTokenHandler,
   verifyEmailHandler,
 } from '../controllers/auth.controller';
 import { rateLimit } from '../middleware/rate-limit.middleware';
@@ -15,4 +16,5 @@ authRoutes.post('/login', loginHandler);
 const resetRateLimiter = rateLimit({ windowMs: 60 * 1000, max: 30 });
 authRoutes.post('/forgot-password', resetRateLimiter, forgotPasswordHandler);
 authRoutes.post('/reset-password', resetRateLimiter, resetPasswordHandler);
+authRoutes.get('/reset-password/:token', resetRateLimiter, validateResetTokenHandler);
 authRoutes.get('/verify/:email', verifyEmailHandler);
